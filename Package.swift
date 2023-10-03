@@ -28,7 +28,6 @@ let dependencies: [Package.Dependency] = [
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
     
     // Additional Transform Dependencies
-    .package(url: "https://github.com/awslabs/aws-sdk-swift.git", from: "0.23.0"),
     .package(url: "https://github.com/googleapis/google-auth-library-swift",from:"0.0.0"),
    
     // Swift Macro Support
@@ -42,6 +41,9 @@ let dependencies: [Package.Dependency] = [
 
 let package = Package(
     name: "ApacheBeam",
+    platforms:[
+        .macOS("13.0")
+    ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
@@ -57,7 +59,6 @@ let package = Package(
             dependencies: [
                 .product(name: "GRPC",package:"grpc-swift"),
                 .product(name: "Logging",package:"swift-log"),
-                .product(name: "AWSS3",package:"aws-sdk-swift"),
                 .product(name: "OAuth2", package:"google-auth-library-swift"),
                 .product(name: "ArgumentParser", package:"swift-argument-parser")
             ]
