@@ -1,6 +1,6 @@
 # Apache Beam Swift SDK
 
-Provides [Apache Beam][0] for Swift.
+Provides the [Apache Beam][0] SDK for Swift.
 
 ## Usage
 
@@ -8,7 +8,7 @@ Add the package dependency in your `Package.swift`:
 
 ```swift
 .package(
-    url: "https://github.com/apache/beam-swift",
+    url: "https://github.com/apache/beam-swift",
     .branch("main")
 )
 ```
