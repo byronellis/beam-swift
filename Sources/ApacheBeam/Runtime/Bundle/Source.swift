@@ -61,7 +61,7 @@ final class Source: SerializableFn {
                 return (id, transform)
             // TODO: Handle timer messages
             default:
-                log.info("Unhanled message \(message)")
+                log.info("Unhandled message \(message)")
             }
         }
         return (context.instruction, context.transform)
