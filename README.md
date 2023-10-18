@@ -1,6 +1,6 @@
 # Apache Beam Swift SDK
 
-Provides [Apache Beam][0] for Swift.
+Provides the [Apache Beam][0] SDK for Swift.
 
 ## Usage
 
