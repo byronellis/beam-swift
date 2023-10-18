@@ -8,7 +8,7 @@ Add the package dependency in your `Package.swift`:
 
 ```swift
 .package(
-    url: "https://github.com/apache/beam-swift",
+    url: "https://github.com/apache/beam-swift",
     .branch("main")
 )
 ```
