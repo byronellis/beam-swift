@@ -19,6 +19,8 @@
 import Foundation
 
 extension Data {
+    /// Encode a variable length integer up to 64-bits
+    /// - Parameter value: The value to encode
     mutating func varint(_ value: Int) {
         var current = UInt64(value)
         while current >= 0x80 {
@@ -28,21 +30,27 @@ extension Data {
         append(UInt8(current))
     }
 
+    
+    /// Append a Date as a modified Java Instant onto the. Resolution will be milliseconds.
+    /// - Parameter value: the date/time value to encode.
     mutating func instant(_ value: Date) {
         let be = (Int64(value.millisecondsSince1970) &- Int64(-9_223_372_036_854_775_808)).bigEndian
         Swift.withUnsafeBytes(of: be) {
             self.append(contentsOf: $0)
         }
     }
-
-    // In Beam integers go on and off the wire in bigEndian format. This matches the original Java lineage.
+    
+    /// Append a fixed-width integer in a Java way (bigendian) to match Beam
+    /// - Parameter value: the value to encode
     mutating func next(_ value: some FixedWidthInteger) {
         let be = value.bigEndian
         Swift.withUnsafeBytes(of: be) {
             self.append(contentsOf: $0)
         }
     }
-
+    
+    /// Append fixed-width floating point values in IEEE format.
+    /// - Parameter value: floating point value to append
     mutating func next(_ value: some FloatingPoint) {
         Swift.withUnsafeBytes(of: value) {
             self.append(contentsOf: $0)

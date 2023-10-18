@@ -203,7 +203,9 @@ public extension PCollection {
 }
 
 public extension PCollection {
-    /// Core GroupByKey transform. Requires a pair input
+    /// The built-in Beam GroupByKey transform. Requires that the input be a Beam key-value type.
+    ///
+    /// - Returns: A ``PCollection`` of type `KV<K,V>` where the value of the key-value pair is a `Sequence` of all values associated with the key `K`
     func groupByKey<K, V>() -> PCollection<KV<K, V>> where Of == KV<K, V> {
         // Adjust the coder for the pcollection to reflect GBK semantcs
         let output = PCollection<KV<K, V>>(coder: .keyvalue(.of(type: K.self)!, .of(type: [V].self)!), type: streamType)

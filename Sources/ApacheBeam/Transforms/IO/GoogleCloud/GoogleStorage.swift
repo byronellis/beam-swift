@@ -69,7 +69,13 @@ public struct GoogleStorage: FileIOSource {
             }
         }
     }
-
+    
+    /// Match files in a Google Cloud Storage Bucket matching the prefix given by `(bucket,prefix)` string pairs.
+    ///
+    /// Note: Currently only the DefaultTokenProvider is supported.
+    ///
+    /// - Parameter matching: A ``PCollection`` of `(bucket,prefix)` pairs.
+    /// - Returns: A ``PCollection`` of `(bucket,file)` pairs.
     public static func listFiles(matching: PCollection<KV<String, String>>) -> PCollection<KV<String, String>> {
         matching.pstream(type: .bounded) { matching, output in
 

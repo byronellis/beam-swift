@@ -17,6 +17,8 @@
  */
 
 extension [(String, String)] {
+    /// Convenience function that converts an aray of (String,String) elements into a dictionary type.
+    /// - Returns: A dictionary of `[String:String]`
     func dict() -> [String: String] {
         reduce(into: [:]) { $0[$1.0] = $1.1 }
     }

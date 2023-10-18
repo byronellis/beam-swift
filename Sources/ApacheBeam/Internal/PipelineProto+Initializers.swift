@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+/// An enumeration for representing various elements of a pipeline protocol buffer. This enum is used
+/// when constructing the pipeline for submission to a portable runner.
 enum PipelineComponent {
     case none
     case transform(String, PTransformProto)
@@ -23,7 +25,8 @@ enum PipelineComponent {
     case coder(String, CoderProto)
     case windowingStrategy(String, WindowingStrategyProto)
     case environment(String, EnvironmentProto)
-
+    
+    /// The name of the pipeline component. Most components in the protocol buffer have a name used to reference the component throughout the pipeline structure.
     var name: String {
         switch self {
         case .none:
@@ -41,6 +44,8 @@ enum PipelineComponent {
         }
     }
 
+    
+    /// The PTransfrom protocol buffer for this component. Returns ``nil`` for everything except a ``transform`` type.
     var transform: PTransformProto? {
         if case let .transform(_, pTransformProto) = self {
             return pTransformProto
@@ -50,16 +55,23 @@ enum PipelineComponent {
     }
 }
 
-/// Convenience function for creating new pipeline elements. Note that these shouldn't be accessed concurrently
-/// but this isn't a problem itself since trying to access the proto concurrently throws an error.
+// Convenience function for creating new pipeline elements. Note that these shouldn't be accessed concurrently
+// but this isn't a problem itself since trying to access the proto concurrently throws an error.
 extension PipelineProto {
+    
+    /// Adds a new `PTransform` protocol buffer to the pipeline along with an internal reference name to be used by other parts of the pipeline.
+    /// - Parameter mapper: A closure that returns the `PTransform` protocol buffer. Includes the reference id as a parameter in case it is needed.
+    /// - Returns: A ``PipelineComponent`` representing this `PTransform`
     mutating func transform(_ mapper: @escaping (String) throws -> PTransformProto) throws -> PipelineComponent {
         let name = "ref_PTransform_\(components.transforms.count + 1)"
         let proto = try mapper(name)
         components.transforms[name] = proto
         return .transform(name, proto)
     }
-
+    
+    /// Adds a new `PCollection` protocol buffer to the pipeline along with an internal reference name to be used elsewhere (e.g. `PTransform`s)
+    /// - Parameter mapper: A closure that returns the `PCollection` protocol buffer. It is passed the reference name in case that is useful
+    /// - Returns: A ``PipelineComponent`` representing the `PCollection`
     mutating func collection(_ mapper: @escaping (String) throws -> PCollectionProto) throws -> PipelineComponent {
         let name = "ref_PCollection_\(components.pcollections.count + 1)"
         let proto = try mapper(name)

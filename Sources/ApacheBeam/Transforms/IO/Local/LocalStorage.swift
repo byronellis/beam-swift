@@ -32,7 +32,6 @@ public struct LocalStorage: FileIOSource {
 
     public static func listFiles(matching: PCollection<KV<String, String>>) -> PCollection<KV<String, String>> {
         matching.pstream(type: .bounded) { input, output in
-            let fm = FileManager.default
             for try await (pathAndPattern, ts, w) in input {
                 let path = pathAndPattern.key
                 let patterns = try pathAndPattern.values.map { try Regex($0) }

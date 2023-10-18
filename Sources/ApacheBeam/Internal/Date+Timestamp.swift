@@ -19,10 +19,13 @@
 import Foundation
 
 extension Date {
+    /// Convenience property to extract Java-style milliseconds since the UNIX epoch
     var millisecondsSince1970: Int64 {
         Int64((timeIntervalSince1970 * 1000.0).rounded())
     }
-
+    
+    /// Create a ``Date`` from UNIX epoch milliseconds
+    /// - Parameter millisecondsSince1970: Milliseconds to convert
     init(millisecondsSince1970: Int64) {
         self = Date(timeIntervalSince1970: Double(millisecondsSince1970) / 1000.0)
     }

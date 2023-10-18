@@ -17,6 +17,9 @@
  */
 
 extension PipelineProto {
+    /// Construct an appropriate coder representation from the current pipeline, perhaps also encoding component coders.
+    /// - Parameter from: The ``Coder`` to convert.
+    /// - Returns: ``PipelineComponent`` representing this coder
     mutating func coder(from: Coder) -> PipelineComponent {
         let componentCoders: [String] = switch from {
         case let .keyvalue(keyCoder, valueCoder):
