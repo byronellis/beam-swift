@@ -18,12 +18,33 @@
 
 import Foundation
 
+/// Defines a protocol for transforms that know how to read from external File-like systems given an input
+/// collection of paths.
 public protocol FileIOSource {
+    /// A static function definition that takes `(path,matched_filename)` pairs output by ``readFiles(matching:)`` or some other source
+    /// and reads them as a single data output.
+    ///
+    /// - Parameter matching: An input ``PCollection`` of pairs representing a `(path,matched_filename)`
+    /// where `path` and `matched_filename` are dependent on the specific source.
+    /// - Returns: A ``PCollection`` of binary `Data` elements. Note that the original path and filename is not carried with the data.
     static func readFiles(matching: PCollection<KV<String, String>>) -> PCollection<Data>
+   
+    /// Static function definition for reading a list of files matching some pattern at a given path. The definition of "path" largely depends on the
+    /// source type. For example, for remote object stores that might be a bucket or a bucket prefix while for a local filesystem it would be a
+    /// standard file path. It is best to check the specific transform's documentation to verify
+    ///
+    ///
+    /// - Parameter matching: A pair representing the path to check and pattern to check with.
+    ///
+    /// - Returns: A list of pairs of the form `(path,matched_filename)`
     static func listFiles(matching: PCollection<KV<String, String>>) -> PCollection<KV<String, String>>
 }
 
 public extension PCollection<KV<String, String>> {
+    /// A transform for reading files from a concrete ``FileIOSource``.
+    /// - Parameter `_`: The type of ``FileIOSource`` to use. For example ``LocalStorage.self``
+    ///
+    /// - Returns: The data elements from the ``readFiles(matching:)`` implementation for this ``FileIOSource``
     func readFiles<Source: FileIOSource>(in _: Source.Type) -> PCollection<Data> {
         Source.readFiles(matching: self)
     }

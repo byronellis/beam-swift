@@ -19,8 +19,10 @@
 import Foundation
 
 extension Data {
-    /// advanced(by:) has issues on non-macOS Foundation implementations
     @inlinable
+    /// A safer version of `advanced(by:)`. On non-macOS Foundation implementations ``advanced(by:)`` segfaults on ``Data`` elements with size 0.
+    /// - Parameter by: Number of elements to advance
+    /// - Returns: A possibly different ``Data`` element.
     func safeAdvance(by: Int) -> Data {
         #if os(macOS)
             return advanced(by: by)
@@ -36,6 +38,7 @@ extension Data {
     }
 
     /// Read a variable length integer from the current data
+    /// - Returns: An integer of up to 64 bits.
     mutating func varint() throws -> Int {
         var advance = 0
         let result = try withUnsafeBytes {
@@ -68,20 +71,27 @@ extension Data {
         return result
     }
 
+    
+    /// Decodes a Beam time value, which is a Java Instant that has been encoded to sort properly
+    /// - Returns: A Date value
     mutating func instant() throws -> Date {
         let millis = try next(Int64.self) &+ Int64(-9_223_372_036_854_775_808)
         return Date(millisecondsSince1970: millis)
     }
 
-    /// Read a length prefixed chunk of data
+    
+    /// Implements the Beam length-prefixed byte blob encoding
+    /// - Returns: A ``Data`` with a size defined by the length encoding
     mutating func subdata() throws -> Data {
         let length = try varint()
         let result = subdata(in: 0 ..< length)
         self = safeAdvance(by: length)
         return result
     }
-
-    /// Extracts a fixed width type. Coming off the wire this will always be bigendian
+    
+    /// Read a fixed length integer of the specified type. In Beam the wire encoding is always a Java-style bigendian value
+    /// - Parameter _: The integer type of read
+    /// - Returns: The integer value read.
     mutating func next<T: FixedWidthInteger>(_: T.Type) throws -> T {
         let size = MemoryLayout<T>.size
         let bigEndian = withUnsafeBytes {
@@ -91,6 +101,10 @@ extension Data {
         return T(bigEndian: bigEndian)
     }
 
+    
+    /// Read a fixed length floating point value of the specified type.
+    /// - Parameter _: The floating point type to read
+    /// - Returns: The floating point value
     mutating func next<T: FloatingPoint>(_: T.Type) throws -> T {
         let result = withUnsafeBytes {
             $0.load(as: T.self)

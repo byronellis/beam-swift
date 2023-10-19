@@ -37,6 +37,8 @@ public struct ApiServiceDescriptor {
 }
 
 extension ApiServiceDescriptor {
+    /// Populate the ``ApiServiceDescriptor`` from the Beam protobuf representation
+    /// - Parameter proto: A valid protocol buffer
     init(proto: Org_Apache_Beam_Model_Pipeline_V1_ApiServiceDescriptor) {
         url = proto.url
     }
@@ -51,6 +53,14 @@ extension ApiServiceDescriptor: ProtoConversion {
 extension ApiServiceDescriptor: Hashable {}
 
 public extension ApiServiceDescriptor {
+    /// Convenience function to decode an ApiServiceDescriptor from a text or JSON encoded protocol buffer passed as environment variable.
+    /// This technique is used by Runners when launching containers.
+    ///
+    /// - Parameters:
+    ///   - env: The name of the environment variable to check
+    ///   - format: The variable's encoding.
+    /// - Returns: An ``ApiServiceDescriptor`` for the specified service.
+    /// 
     static func from(env: String, format: EncodedAs = .textproto) throws -> ApiServiceDescriptor {
         switch format {
         case .textproto:

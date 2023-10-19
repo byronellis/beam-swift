@@ -17,6 +17,9 @@
  */
 
 extension PipelineProto {
+    /// Encode a native ``Environment`` into its protobuf form as a ``PipelineComponent``
+    /// - Parameter from: the ``Environment`` to encode
+    /// - Returns: A ``PipelineComponent`` representation 
     mutating func environment(from: Environment) throws -> PipelineComponent {
         try environment { _ in
             try .with {

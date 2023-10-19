@@ -20,6 +20,10 @@ import Foundation
 
 public extension PCollection {
     // No Output
+    /// Apply a closure-based ``DoFn`` to an input ``PCollection`` that returns no output.
+    /// - Parameters:
+    ///   - name: A name for this transform
+    ///   - fn: A closure that implements a DoFn by taking a single ``PInput`` and emitting no outputs
     func pardo(name: String, _ fn: @Sendable @escaping (PInput<Of>) async throws -> Void) {
         pstream(name: name) { input in
             for try await element in input {
@@ -29,6 +33,11 @@ public extension PCollection {
     }
 
     // One Output
+    /// Apply a closure-based ``DoFn`` to an input ``PCollection`` that emits to a single output ``PCollection``
+    /// - Parameters:
+    ///   - name: A name for this transform
+    ///   - fn: <#fn description#>
+    /// - Returns: <#description#>
     func pardo<O0>(name: String, _ fn: @Sendable @escaping (PInput<Of>, POutput<O0>) async throws -> Void) -> PCollection<O0> {
         pstream(name: name) { input, output in
             for try await element in input {
