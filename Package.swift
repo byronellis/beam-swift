@@ -23,9 +23,10 @@ import PackageDescription
 
 let dependencies: [Package.Dependency] = [
     // Core Dependencies
-    .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.19.0"),
+    .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.20.0"),
     .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
+    .package(url: "https://github.com/apple/swift-metrics.git", "1.0.0" ..< "3.0.0"),
     
     // Additional Transform Dependencies
     .package(url: "https://github.com/googleapis/google-auth-library-swift",from:"0.0.0"),
@@ -59,6 +60,7 @@ let package = Package(
             dependencies: [
                 .product(name: "GRPC",package:"grpc-swift"),
                 .product(name: "Logging",package:"swift-log"),
+                .product(name: "Metrics", package: "swift-metrics"),
                 .product(name: "OAuth2", package:"google-auth-library-swift"),
                 .product(name: "ArgumentParser", package:"swift-argument-parser")
             ]

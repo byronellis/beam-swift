@@ -17,6 +17,8 @@
  */
 
 import ArgumentParser
+import Logging
+import Metrics
 
 final class PipelineExecutor: AsyncParsableCommand {
     public init() {}
@@ -29,6 +31,8 @@ public protocol PipelineCommand: ParsableArguments {
 public extension PipelineCommand {
     static func main() async {
         do {
+            LoggingSystem.bootstrap({ label in LogEntryHandler(label:label) })
+            MetricsSystem.bootstrap(MetricValueHandler())
             let options = try PipelineExecutor.parseAsRoot()
 
         } catch {

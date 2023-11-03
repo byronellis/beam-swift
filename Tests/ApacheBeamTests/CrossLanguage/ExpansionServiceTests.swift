@@ -18,6 +18,8 @@
 
 @testable import ApacheBeam
 import XCTest
+import GRPC
+import NIOCore
 
 final class ExpansionServiceTests: XCTestCase {
     override func setUpWithError() throws {}
@@ -25,10 +27,14 @@ final class ExpansionServiceTests: XCTestCase {
     override func tearDownWithError() throws {}
 
     func testConnectExpansionService() async throws {
-        let client = try ExpansionClient(endpoint: .init(host: "localhost", port: 8097))
-        let transforms = try await client.transforms()
-        for t in transforms {
-            print("\(t)")
+        do {
+            let client = try ExpansionClient(endpoint: .init(host: "localhost", port: 8097))
+            let transforms = try await client.transforms()
+            for t in transforms {
+                print("\(t)")
+            }
+        } catch let error as GRPCConnectionPoolError where error.code == .deadlineExceeded {
+            throw XCTSkip("Expansion Service isn't running. Skipping expansion service tests.")
         }
     }
 }
