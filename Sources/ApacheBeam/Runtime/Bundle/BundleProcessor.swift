@@ -20,6 +20,9 @@ import Logging
 
 import Foundation
 
+typealias ProgressUpdater = (AsyncStream<Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse>.Continuation) -> Void
+
+
 struct BundleProcessor {
     let log: Logging.Logger
 
@@ -32,28 +35,38 @@ struct BundleProcessor {
     }
 
     let steps: [Step]
+    let (bundleMetrics,bundleMetricsReporter) = AsyncStream.makeStream(of: MetricCommand.self)
 
     init(id: String,
          descriptor: Org_Apache_Beam_Model_FnExecution_V1_ProcessBundleDescriptor,
          collections: [String: AnyPCollection],
-         fns: [String: SerializableFn]) throws
+         fns: [String: SerializableFn],
+         registry: MetricsRegistry) async throws
     {
         log = Logging.Logger(label: "BundleProcessor(\(id) \(descriptor.id))")
 
         var temp: [Step] = []
-        var coders = BundleCoderContainer(bundle: descriptor)
+        let coders = BundleCoderContainer(bundle: descriptor)
 
         var streams: [String: AnyPCollectionStream] = [:]
         // First make streams for everything in this bundle (maybe I could use the pcollection array for this?)
         for (_, transform) in descriptor.transforms {
             for id in transform.inputs.values {
                 if streams[id] == nil {
-                    streams[id] = collections[id]!.anyStream
+                    let metrics = MetricReporter(registry: registry, reporter: bundleMetricsReporter,transform: transform.uniqueName, pcollection: id)
+                    let elementsRead = await metrics.elementCount(name: "total-elements-read")
+                    streams[id] = collections[id]!.anyStream({ count,_ in
+                        elementsRead(count)
+                    })
                 }
             }
             for id in transform.outputs.values {
                 if streams[id] == nil {
-                    streams[id] = collections[id]!.anyStream
+                    let metrics = MetricReporter(registry: registry, reporter: bundleMetricsReporter,transform: transform.uniqueName, pcollection: id)
+                    let elementsWritten = await metrics.elementCount(name: "total-elements-written")
+                    streams[id] = collections[id]!.anyStream({ count,_ in
+                        elementsWritten(count)
+                    })
                 }
             }
         }
@@ -104,15 +117,33 @@ struct BundleProcessor {
         }
         steps = temp
     }
-
-    public func process(instruction: String, responder: AsyncStream<Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse>.Continuation) async {
+    
+    public func process(instruction: String, accumulator: MetricAccumulator, responder: AsyncStream<Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse>.Continuation) async {
+        
+        // Start metric handling. This should complete after the group
+        Task {
+            var reporter = await accumulator.reporter
+            log.info("Monitoring bundle metrics for \(instruction)")
+            for await command in bundleMetrics {
+                switch command {
+                case .update(_, _):
+                    reporter.yield(command)
+                case .report(_):
+                    continue
+                case .finish(_):
+                    log.info("Done monitoring bundle metrics for \(instruction)")
+                    return
+                }
+            }
+        }
+        
         _ = await withThrowingTaskGroup(of: (String, String).self) { group in
             log.info("Starting bundle processing for \(instruction)")
             var count: Int = 0
             do {
                 for step in steps {
                     log.info("Starting Task \(step.transformId)")
-                    let context = SerializableFnBundleContext(instruction: instruction, transform: step.transformId, payload: step.payload, log: log)
+                    let context = SerializableFnBundleContext(instruction: instruction, transform: step.transformId, payload: step.payload, metrics: await MetricReporter(accumulator: accumulator, transform: step.transformId), log: log)
                     group.addTask {
                         try await step.fn.process(context: context, inputs: step.inputs, outputs: step.outputs)
                     }
@@ -123,10 +154,18 @@ struct BundleProcessor {
                     finished += 1
                     log.info("Task Completed (\(instruction),\(transform)) \(finished) of \(count)")
                 }
-                log.info("All tasks completed for \(instruction)")
-                responder.yield(.with {
-                    $0.instructionID = instruction
-                })
+                bundleMetricsReporter.yield(.finish({ _,_ in }))
+                await accumulator.reporter.yield(.finish({ metricInfo,metricData in
+                    log.info("All tasks completed for \(instruction)")
+                    responder.yield(.with {
+                        $0.instructionID = instruction
+                        $0.processBundle = .with {
+                            $0.monitoringData.merge(metricData, uniquingKeysWith: {a,b in b})
+                            $0.monitoringInfos.append(contentsOf: metricInfo)
+                            $0.requiresFinalization = true
+                        }
+                    })
+                }));
             } catch {
                 responder.yield(.with {
                     $0.instructionID = instruction

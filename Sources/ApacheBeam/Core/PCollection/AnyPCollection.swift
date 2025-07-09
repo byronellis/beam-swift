@@ -25,7 +25,7 @@ public struct AnyPCollection: PCollectionProtocol, PipelineMember {
     let applyClosure: (Any, PipelineTransform) -> PipelineTransform
     let consumersClosure: (Any) -> [PipelineTransform]
     let coderClosure: (Any) -> Coder
-    let streamClosure: (Any) -> AnyPCollectionStream
+    let streamClosure: (Any,@escaping ElementReporter) -> AnyPCollectionStream
     let rootsClosure: (Any) -> [PCollection<Never>]
     let streamTypeClosure: (Any) -> StreamType
 
@@ -40,7 +40,7 @@ public struct AnyPCollection: PCollectionProtocol, PipelineMember {
             applyClosure = { ($0 as! C).apply($1) }
             consumersClosure = { ($0 as! C).consumers }
             coderClosure = { ($0 as! C).coder }
-            streamClosure = { AnyPCollectionStream(($0 as! C).stream) }
+            streamClosure = { AnyPCollectionStream(($0 as! C).stream($1)) }
             parentClosure = { ($0 as! C).parent }
             rootsClosure = { ($0 as! PipelineMember).roots }
             streamTypeClosure = { ($0 as! C).streamType }
@@ -64,7 +64,7 @@ public struct AnyPCollection: PCollectionProtocol, PipelineMember {
         coderClosure(collection)
     }
 
-    public var stream: PCollectionStream<Never> {
+    public func stream(_ reporter: @escaping ElementReporter) -> PCollectionStream<Never> {
         fatalError("Do not use `stream` on AnyPCollection. Use `anyStream` instead.")
     }
 
@@ -72,8 +72,8 @@ public struct AnyPCollection: PCollectionProtocol, PipelineMember {
         streamTypeClosure(collection)
     }
 
-    public var anyStream: AnyPCollectionStream {
-        streamClosure(collection)
+    public func anyStream(_ reporter: @escaping ElementReporter) -> AnyPCollectionStream {
+        streamClosure(collection,reporter)
     }
 
     var roots: [PCollection<Never>] {

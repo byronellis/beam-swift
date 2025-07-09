@@ -26,6 +26,8 @@ public enum WindowingStrategy {
     case unspecified
 }
 
+public typealias ElementReporter = (Int,Int?) -> Void
+
 public protocol PCollectionProtocol {
     associatedtype Of
 
@@ -34,11 +36,12 @@ public protocol PCollectionProtocol {
     var parent: PipelineTransform? { get }
     var consumers: [PipelineTransform] { get }
     var coder: Coder { get }
-    var stream: Stream { get }
     var streamType: StreamType { get }
 
     @discardableResult
     func apply(_ transform: PipelineTransform) -> PipelineTransform
+    
+    func stream(_ elements: @escaping ElementReporter) -> Stream
 }
 
 public final class PCollection<Of>: PCollectionProtocol {
@@ -62,8 +65,8 @@ public final class PCollection<Of>: PCollectionProtocol {
         streamType = type
     }
 
-    public var stream: PCollectionStream<Of> {
-        staticStream ?? PCollectionStream<Of>()
+    public func stream(_ reporter: @escaping ElementReporter) -> PCollectionStream<Of> {
+        return staticStream ?? PCollectionStream<Of>(reporter)
     }
 
     @discardableResult

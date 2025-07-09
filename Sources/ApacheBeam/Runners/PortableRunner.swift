@@ -64,7 +64,7 @@ public struct PortableRunner: PipelineRunner {
             })
             log.info("Job \(job.jobID) status: \(status.state)")
             switch status.state {
-            case .stopped, .failed, .done:
+            case .stopped, .failed, .done, .cancelled:
                 done = true
             default:
                 try await Task.sleep(for: .seconds(5))

@@ -21,7 +21,7 @@ import Foundation
 final class Sink: SerializableFn {
     let client: DataplaneClient
     let coder: Coder
-
+    
     public init(client: DataplaneClient, coder: Coder) {
         self.client = client
         self.coder = coder
@@ -30,12 +30,20 @@ final class Sink: SerializableFn {
     func process(context: SerializableFnBundleContext,
                  inputs: [AnyPCollectionStream], outputs _: [AnyPCollectionStream]) async throws -> (String, String)
     {
+        let bytesWritten = await context.metrics.counter(name: "bytes-written")
+        let recordsWritten = await context.metrics.counter(name: "records-written")
         let (_, emitter) = await client.makeStream(instruction: context.instruction, transform: context.transform)
+        var bytes = 0
+        var records = 0
         for try await element in inputs[0] {
             var output = Data()
             try coder.encode(element, data: &output)
+            bytes += output.count
+            records += 1
             emitter.yield(.data(output))
         }
+        bytesWritten(bytes)
+        recordsWritten(records)
         emitter.yield(.last(context.instruction, context.transform))
         emitter.finish()
         await client.finalizeStream(instruction: context.instruction, transform: context.transform)

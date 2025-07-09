@@ -33,9 +33,9 @@ public struct PCollectionTest {
         if let transform = output.parent {
             switch transform {
             case let .pardo(parent, _, fn, outputs):
-                let context = try SerializableFnBundleContext(instruction: "1", transform: "test", payload: fn.payload, log: log)
-                let input = parent.anyStream
-                let streams = outputs.map(\.anyStream)
+                let context = try SerializableFnBundleContext(instruction: "1", transform: "test", payload: fn.payload, metrics: await MetricReporter(accumulator: MetricAccumulator(instruction:"inst000",registry:MetricsRegistry())), log: log)
+                let input = parent.anyStream({ _,_ in })
+                let streams = outputs.map({ $0.anyStream({ _,_ in }) })
 
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     log.info("Starting process task")

@@ -24,9 +24,11 @@ public final class PCollectionStream<Of>: AsyncSequence {
 
     private let stream: AsyncStream<Element>
     private let emitter: AsyncStream<Element>.Continuation
+    private let reporter: ElementReporter
 
-    public init() {
+    public init(_ reporter: @escaping ElementReporter) {
         (stream, emitter) = AsyncStream.makeStream(of: Element.self)
+        self.reporter = reporter
     }
 
     public func makeAsyncIterator() -> AsyncStream<Element>.Iterator {
@@ -38,6 +40,7 @@ public final class PCollectionStream<Of>: AsyncSequence {
     }
 
     public func emit(_ value: Element) {
+        reporter(1,nil)
         emitter.yield(value)
     }
 

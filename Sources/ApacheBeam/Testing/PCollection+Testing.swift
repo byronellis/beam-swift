@@ -21,7 +21,7 @@ import Foundation
 public extension PCollection {
     /// Create a PCollection whose stream has been preloaded with some values for testing
     static func testValues<V: Beamable>(_ values: [V]) -> PCollection<V> {
-        let stream = PCollectionStream<V>()
+        let stream = PCollectionStream<V>({ _,_ in })
         for v in values {
             stream.emit(v, timestamp: .now, window: .global)
         }

@@ -24,7 +24,10 @@ import Logging
 final class Source: SerializableFn {
     let client: DataplaneClient
     let coder: Coder
+
     let log: Logger
+    
+    
 
     public init(client: DataplaneClient, coder: Coder) {
         self.client = client
@@ -36,6 +39,8 @@ final class Source: SerializableFn {
                  inputs _: [AnyPCollectionStream], outputs: [AnyPCollectionStream]) async throws -> (String, String)
     {
         log.info("Waiting for input on \(context.instruction)-\(context.transform)")
+        let bytesRead = await context.metrics.counter(name: "bytes-read")
+        let recordsRead = await context.metrics.counter(name: "records-read")
         let (stream, _) = await client.makeStream(instruction: context.instruction, transform: context.transform)
 
         var messages = 0
@@ -45,13 +50,19 @@ final class Source: SerializableFn {
             switch message {
             case let .data(data):
                 var d = data
+                let totalBytes = data.count
+                var localCount = 0
                 while d.count > 0 {
                     let value = try coder.decode(&d)
                     for output in outputs {
                         try output.emit(value: value)
-                        count += 1
                     }
+                    count += 1
+                    localCount += 1
                 }
+                bytesRead(totalBytes - d.count)
+                recordsRead(localCount)
+                
             case let .last(id, transform):
                 for output in outputs {
                     output.finish()

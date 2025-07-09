@@ -23,6 +23,7 @@ public struct SerializableFnBundleContext {
     let instruction: String
     let transform: String
     let payload: Data
+    let metrics: MetricReporter
     let log: Logging.Logger
 }
 
