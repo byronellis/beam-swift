@@ -24,11 +24,11 @@ final class ExpansionServiceTests: XCTestCase {
 
     override func tearDownWithError() throws {}
 
-    func testConnectExpansionService() async throws {
+    /*func testConnectExpansionService() async throws {
         let client = try ExpansionClient(endpoint: .init(host: "localhost", port: 8097))
         let transforms = try await client.transforms()
         for t in transforms {
             print("\(t)")
         }
-    }
+    }*/
 }

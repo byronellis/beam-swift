@@ -47,10 +47,9 @@ actor Worker {
 
     public func start() throws {
         let group = PlatformSupport.makeEventLoopGroup(loopCount: 1)
-        let client = try Org_Apache_Beam_Model_FnExecution_V1_BeamFnControlAsyncClient(channel: GRPCChannelPool.with(endpoint: control, eventLoopGroup: group))
+        let client = try Org_Apache_Beam_Model_FnExecution_V1_BeamFnControlAsyncClient(channel: GRPCChannelPool.with(endpoint: control, eventLoopGroup: group),defaultCallOptions: CallOptions(customMetadata: ["worker_id": id]))
         let (responses, responder) = AsyncStream.makeStream(of: Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse.self)
-        let options = CallOptions(customMetadata: ["worker_id": id])
-        let control = client.makeControlCall(callOptions: options)
+        let control = client.makeControlCall()
 
         // Start the response task. This will continue until a yield call is sent from responder
         Task {

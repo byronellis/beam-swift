@@ -35,7 +35,7 @@ struct BundleProcessor {
     }
 
     let steps: [Step]
-    let (bundleMetrics,bundleMetricsReporter) = AsyncStream.makeStream(of: MetricCommand.self)
+    var (bundleMetrics,bundleMetricsReporter) = AsyncStream.makeStream(of: MetricCommand.self)
 
     init(id: String,
          descriptor: Org_Apache_Beam_Model_FnExecution_V1_ProcessBundleDescriptor,
@@ -122,7 +122,7 @@ struct BundleProcessor {
         
         // Start metric handling. This should complete after the group
         Task {
-            var reporter = await accumulator.reporter
+            let reporter = await accumulator.reporter
             log.info("Monitoring bundle metrics for \(instruction)")
             for await command in bundleMetrics {
                 switch command {
