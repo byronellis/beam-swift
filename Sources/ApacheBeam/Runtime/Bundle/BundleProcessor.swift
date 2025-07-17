@@ -41,9 +41,11 @@ struct BundleProcessor {
          descriptor: Org_Apache_Beam_Model_FnExecution_V1_ProcessBundleDescriptor,
          collections: [String: AnyPCollection],
          fns: [String: SerializableFn],
-         registry: MetricsRegistry) async throws
+         registry: MetricsRegistry,
+         dataplaneInterceptor: (RemoteGrpcPort) -> RemoteGrpcPort = { $0 }) async throws
     {
         log = Logging.Logger(label: "BundleProcessor(\(id) \(descriptor.id))")
+
 
         var temp: [Step] = []
         let coders = BundleCoderContainer(bundle: descriptor)
@@ -78,7 +80,8 @@ struct BundleProcessor {
             let outputs = transform.outputs.sorted().map { streams[$0.1]! }
 
             if urn == "beam:runner:source:v1" {
-                let remotePort = try RemoteGrpcPort(serializedData: transform.spec.payload)
+                let remotePort = dataplaneInterceptor(try RemoteGrpcPort(serializedBytes: transform.spec.payload))
+
                 let coder = try Coder.of(name: remotePort.coderID, in: coders)
                 log.info("Source '\(transformId)','\(transform.uniqueName)' \(remotePort) \(coder)")
                 try temp.append(Step(
@@ -89,7 +92,7 @@ struct BundleProcessor {
                     payload: Data()
                 ))
             } else if urn == "beam:runner:sink:v1" {
-                let remotePort = try RemoteGrpcPort(serializedData: transform.spec.payload)
+                let remotePort = dataplaneInterceptor(try RemoteGrpcPort(serializedBytes: transform.spec.payload))
                 let coder = try Coder.of(name: remotePort.coderID, in: coders)
                 log.info("Sink '\(transformId)','\(transform.uniqueName)' \(remotePort) \(coder)")
                 try temp.append(Step(
@@ -101,7 +104,7 @@ struct BundleProcessor {
                 ))
 
             } else if urn == "beam:transform:pardo:v1" {
-                let pardoPayload = try Org_Apache_Beam_Model_Pipeline_V1_ParDoPayload(serializedData: transform.spec.payload)
+                let pardoPayload = try Org_Apache_Beam_Model_Pipeline_V1_ParDoPayload(serializedBytes: transform.spec.payload)
                 if let fn = fns[transform.uniqueName] {
                     temp.append(Step(transformId: transform.uniqueName,
                                      fn: fn,

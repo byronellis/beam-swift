@@ -184,7 +184,7 @@ extension Coder {
             case "beam:coder:length_prefix:v1":
                 return try .lengthprefix(.of(name: baseCoder.componentCoderIds[0], in: container))
             case "beam:coder:row:v1":
-                let proto: SchemaProto = try SchemaProto(serializedData: baseCoder.spec.payload)
+                let proto: SchemaProto = try SchemaProto(serializedBytes: baseCoder.spec.payload)
                 return .row(.from(proto))
             default:
                 return .unknown(baseCoder.spec.urn)

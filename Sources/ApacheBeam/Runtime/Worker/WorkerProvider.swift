@@ -19,30 +19,52 @@
 import GRPC
 import Logging
 
-actor WorkerProvider: Org_Apache_Beam_Model_FnExecution_V1_BeamFnExternalWorkerPoolAsyncProvider {
+actor WorkerProvider:
+    Org_Apache_Beam_Model_FnExecution_V1_BeamFnExternalWorkerPoolAsyncProvider
+{
     private let log = Logging.Logger(label: "Worker")
     private var workers: [String: Worker] = [:]
 
     private let collections: [String: AnyPCollection]
     private let functions: [String: SerializableFn]
+    private let controlEndpoint: ApiServiceDescriptor?
+    private let loggingEndpoint: ApiServiceDescriptor?
+    private let dataplaneEndpoint: ApiServiceDescriptor?
 
-    init(_ collections: [String: AnyPCollection], _ functions: [String: SerializableFn]) throws {
+    init(
+        _ collections: [String: AnyPCollection],
+        _ functions: [String: SerializableFn],
+        controlEndpoint: ApiServiceDescriptor? = nil,
+        loggingEndpoint: ApiServiceDescriptor? = nil,
+        dataplaneEndpoint: ApiServiceDescriptor? = nil
+    ) throws {
         self.collections = collections
         self.functions = functions
+        self.controlEndpoint = controlEndpoint
+        self.loggingEndpoint = loggingEndpoint
+        self.dataplaneEndpoint = dataplaneEndpoint
     }
 
-    func startWorker(request: Org_Apache_Beam_Model_FnExecution_V1_StartWorkerRequest, context _: GRPC.GRPCAsyncServerCallContext) async throws -> Org_Apache_Beam_Model_FnExecution_V1_StartWorkerResponse {
+    func startWorker(
+        request: Org_Apache_Beam_Model_FnExecution_V1_StartWorkerRequest,
+        context _: GRPC.GRPCAsyncServerCallContext
+    ) async throws -> Org_Apache_Beam_Model_FnExecution_V1_StartWorkerResponse {
         log.info("Got request to start worker \(request.workerID)")
         do {
             if workers[request.workerID] != nil {
                 log.info("Worker \(request.workerID) is already running.")
                 return .with { _ in }
             } else {
-                let worker = Worker(id: request.workerID,
-                                    control: ApiServiceDescriptor(proto: request.controlEndpoint),
-                                    log: ApiServiceDescriptor(proto: request.loggingEndpoint),
-                                    collections: collections,
-                                    functions: functions)
+                let worker = Worker(
+                    id: request.workerID,
+                    control: controlEndpoint
+                        ?? ApiServiceDescriptor(proto: request.controlEndpoint),
+                    log: loggingEndpoint
+                        ?? ApiServiceDescriptor(proto: request.loggingEndpoint),
+                    data: dataplaneEndpoint,
+                    collections: collections,
+                    functions: functions
+                )
                 try await worker.start()
                 workers[request.workerID] = worker
             }
@@ -55,8 +77,13 @@ actor WorkerProvider: Org_Apache_Beam_Model_FnExecution_V1_BeamFnExternalWorkerP
         }
     }
 
-    func stopWorker(request _: Org_Apache_Beam_Model_FnExecution_V1_StopWorkerRequest, context _: GRPC.GRPCAsyncServerCallContext) async throws -> Org_Apache_Beam_Model_FnExecution_V1_StopWorkerResponse {
-        .with { _ in }
+    func stopWorker(
+        request: Org_Apache_Beam_Model_FnExecution_V1_StopWorkerRequest,
+        context _: GRPC.GRPCAsyncServerCallContext
+    ) async throws -> Org_Apache_Beam_Model_FnExecution_V1_StopWorkerResponse {
+        log.info("Stopping \(request.workerID)")
+        workers.removeValue(forKey: request.workerID)
+        return .with { _ in }
     }
 }
 
@@ -65,15 +92,35 @@ public struct WorkerServer {
 
     public let endpoint: ApiServiceDescriptor
 
-    public init(_ collections: [String: AnyPCollection], _ fns: [String: SerializableFn], host: String = "localhost", port: Int = 0) throws {
-        server = try .insecure(group: PlatformSupport.makeEventLoopGroup(loopCount: 1))
-            .withServiceProviders([WorkerProvider(collections, fns)])
-            .bind(host: host, port: port)
-            .wait()
+    public init(
+        _ collections: [String: AnyPCollection],
+        _ fns: [String: SerializableFn],
+        host: String = "localhost",
+        port: Int = 0,
+        controlEndpoint: ApiServiceDescriptor? = nil,
+        loggingEndpoint: ApiServiceDescriptor? = nil,
+        dataplaneEndpoint: ApiServiceDescriptor? = nil
+    ) throws {
+        server = try .insecure(
+            group: PlatformSupport.makeEventLoopGroup(loopCount: 1)
+        )
+        .withServiceProviders([
+            WorkerProvider(
+                collections,
+                fns,
+                controlEndpoint: controlEndpoint,
+                loggingEndpoint: loggingEndpoint,
+                dataplaneEndpoint: dataplaneEndpoint
+            )
+        ])
+        .bind(host: host, port: port)
+        .wait()
         if let port = server.channel.localAddress?.port {
             endpoint = ApiServiceDescriptor(host: host, port: port)
         } else {
-            throw ApacheBeamError.runtimeError("Unable to get server local address port.")
+            throw ApacheBeamError.runtimeError(
+                "Unable to get server local address port."
+            )
         }
     }
 }

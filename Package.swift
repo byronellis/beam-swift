@@ -23,32 +23,52 @@ import PackageDescription
 
 let dependencies: [Package.Dependency] = [
     // Core Dependencies
-    .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.19.0"),
+    .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.26.0"),
     .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
-    .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
-    
+    .package(
+        url: "https://github.com/apple/swift-argument-parser",
+        from: "1.2.0"
+    ),
+
+    // Support Dependencies
+    .package(
+        url: "https://github.com/apple/swift-openapi-runtime",
+        from: "1.8.2"
+    ),
+    .package(url: "https://github.com/apple/swift-http-types", from: "1.0.2"),
+    .package(
+        url: "https://github.com/swift-server/swift-openapi-async-http-client",
+        from: "1.0.0"
+    ),
+
     // Additional Transform Dependencies
-    .package(url: "https://github.com/googleapis/google-auth-library-swift",from:"0.0.0"),
-   
+    .package(
+        url: "https://github.com/googleapis/google-auth-library-swift",
+        from: "0.0.0"
+    ),
+
     // Swift Macro Support
     .package(url: "https://github.com/apple/swift-syntax.git", branch: "main"),
 
     // Swift Package Manager Plugins
     .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-    .package(url: "https://github.com/nicklockwood/SwiftFormat", from: "0.52.3"),
+    .package(
+        url: "https://github.com/nicklockwood/SwiftFormat",
+        from: "0.52.3"
+    ),
 ]
-
 
 let package = Package(
     name: "ApacheBeam",
-    platforms:[
+    platforms: [
         .macOS("13.0")
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "ApacheBeam",
-            targets: ["ApacheBeam"]),
+            targets: ["ApacheBeam"]
+        )
     ],
     dependencies: dependencies,
     targets: [
@@ -57,14 +77,26 @@ let package = Package(
         .target(
             name: "ApacheBeam",
             dependencies: [
-                .product(name: "GRPC",package:"grpc-swift"),
-                .product(name: "Logging",package:"swift-log"),
-                .product(name: "OAuth2", package:"google-auth-library-swift"),
-                .product(name: "ArgumentParser", package:"swift-argument-parser")
+                .product(name: "GRPC", package: "grpc-swift"),
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "OAuth2", package: "google-auth-library-swift"),
+                .product(
+                    name: "OpenAPIRuntime",
+                    package: "swift-openapi-runtime"
+                ),
+                .product(
+                    name: "OpenAPIAsyncHTTPClient",
+                    package: "swift-openapi-async-http-client"
+                ),
+                .product(
+                    name: "ArgumentParser",
+                    package: "swift-argument-parser"
+                ),
             ]
         ),
         .testTarget(
             name: "ApacheBeamTests",
-            dependencies: ["ApacheBeam"]),
+            dependencies: ["ApacheBeam"]
+        ),
     ]
 )

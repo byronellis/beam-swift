@@ -16,6 +16,13 @@
  * limitations under the License.
  */
 
+public enum PipelineCompletionState {
+    case stopped
+    case failed
+    case done
+    case cancelled
+}
+
 public protocol PipelineRunner {
-    func run(_ context: PipelineContext) async throws
+    func run(_ context: PipelineContext) async throws -> PipelineCompletionState
 }

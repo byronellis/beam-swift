@@ -38,6 +38,14 @@ extension StreamType {
     }
 }
 
+public enum JobCompletionState {
+    case stopped
+    case failed
+    case done
+    case cancelled
+}
+
+
 public final class Pipeline {
     let content: (inout PCollection<Never>) -> Void
     let log: Logging.Logger
@@ -56,7 +64,7 @@ public final class Pipeline {
         }
     }
 
-    public func run(_ runner: PipelineRunner) async throws {
+    public func run(_ runner: PipelineRunner) async throws -> PipelineCompletionState {
         try await runner.run(context)
     }
 

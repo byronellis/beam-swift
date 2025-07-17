@@ -78,6 +78,6 @@ final class CompositeIntegrationTests: XCTestCase {
         throw XCTSkip()
         try await Pipeline {
             FixtureWordCount(fixtures: ["file1.txt", "file2.txt", "missing.txt"])
-        }.run(PortableRunner(loopback: true))
+        }.run(PortableRunner(loopback: .localhost))
     }
 }

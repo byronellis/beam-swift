@@ -24,15 +24,33 @@
 //
 import ApacheBeam
 import Logging
-import XCTest
+import Testing
+import Foundation
 
-final class FileIOTests: XCTestCase {
-    override func setUpWithError() throws {}
-
-    override func tearDownWithError() throws {}
-
+final class FileIOTests {
+    
+    let prism: PrismContainer
+    
+    init() async throws {
+        let podman = try PodmanContainerRuntime()
+        self.prism = try await PrismContainer(runtime: podman)
+        try await self.prism.start()
+    }
+    
+    deinit {
+        let local = prism
+        Task.detached {
+            let logger = Logging.Logger(label:"FileIOTests")
+            logger.info("Shutting down Prism container")
+            do {
+                try await local.stop()
+            } catch {
+                logger.error("\(error)")
+            }
+        }
+    }
+    
     func testGoogleStorageListFiles() async throws {
-        throw XCTSkip()
         try await PCollectionTest(PCollection<KV<String, String>>().listFiles(in: GoogleStorage.self)) { log, inputs, outputs in
             log.info("Sending value")
             try inputs[0].emit(value: KV("dataflow-samples", "shakespeare"))
@@ -45,7 +63,6 @@ final class FileIOTests: XCTestCase {
     }
 
     func testGoogleStorageReadFiles() async throws {
-        throw XCTSkip()
         try await PCollectionTest(PCollection<KV<String, String>>().readFiles(in: GoogleStorage.self)) { log, inputs, outputs in
             log.info("Sending value")
             try inputs[0].emit(value: KV("dataflow-samples", "shakespeare/asyoulikeit.txt"))
@@ -57,6 +74,7 @@ final class FileIOTests: XCTestCase {
         }.run()
     }
 
+    @Test
     func testShakespeareWordcount() async throws {
         try await Pipeline { pipeline in
             let contents = pipeline
@@ -91,6 +109,7 @@ final class FileIOTests: XCTestCase {
 
             normalizedCounts.log(prefix: "COUNT OUTPUT")
 
-        }.run(PortableRunner(loopback: true))
+        }.run(prism.runner(loopback: true))
+
     }
 }

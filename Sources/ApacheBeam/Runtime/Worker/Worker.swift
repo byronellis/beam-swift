@@ -30,15 +30,17 @@ actor Worker {
     private let fns: [String: SerializableFn]
     private let control: ApiServiceDescriptor
     private let remoteLog: ApiServiceDescriptor
+    private let data: ApiServiceDescriptor?
 
     private let log: Logging.Logger
     private let registry: MetricsRegistry
 
-    public init(id: String, control: ApiServiceDescriptor, log: ApiServiceDescriptor, collections: [String: AnyPCollection], functions: [String: SerializableFn]) {
+    public init(id: String, control: ApiServiceDescriptor, log: ApiServiceDescriptor, data: ApiServiceDescriptor? = nil, collections: [String: AnyPCollection], functions: [String: SerializableFn]) {
         self.id = id
         self.collections = collections
         fns = functions
         self.control = control
+        self.data = data
         remoteLog = log
 
         self.log = Logging.Logger(label: "Worker(\(id))")
@@ -50,11 +52,27 @@ actor Worker {
         let client = try Org_Apache_Beam_Model_FnExecution_V1_BeamFnControlAsyncClient(channel: GRPCChannelPool.with(endpoint: control, eventLoopGroup: group),defaultCallOptions: CallOptions(customMetadata: ["worker_id": id]))
         let (responses, responder) = AsyncStream.makeStream(of: Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse.self)
         let control = client.makeControlCall()
+        
+        let dataInterceptor: (RemoteGrpcPort) -> RemoteGrpcPort
+        if let dataplane = data {
+            dataInterceptor = { original in
+                do {
+                    return try .with {
+                        $0.coderID = original.coderID
+                        try dataplane.populate(&$0.apiServiceDescriptor)
+                    }
+                } catch {
+                   return original
+                }
+            }
+        } else {
+            dataInterceptor = { $0 }
+        }
+        
 
         // Start the response task. This will continue until a yield call is sent from responder
         Task {
             for await r in responses {
-//                log.info("Sending response \(r)")
                 try await control.requestStream.send(r)
             }
         }
@@ -62,6 +80,7 @@ actor Worker {
         // Start the actual work task
         Task {
             log.info("Waiting for control plane instructions.")
+            
             var processors: [String: BundleProcessor] = [:]
             var metrics: [String: MetricAccumulator] = [:]
 
@@ -70,7 +89,7 @@ actor Worker {
                     return processor
                 }
                 let descriptor = try await client.getProcessBundleDescriptor(.with { $0.processBundleDescriptorID = bundle })
-                let processor = try await BundleProcessor(id: id, descriptor: descriptor, collections: collections, fns: fns, registry: registry)
+                let processor = try await BundleProcessor(id: id, descriptor: descriptor, collections: collections, fns: fns, registry: registry, dataplaneInterceptor: dataInterceptor)
                 processors[bundle] = processor
                 return processor
             }
@@ -142,4 +161,5 @@ actor Worker {
             log.info("Control plane connection has closed.")
         }
     }
+    
 }
