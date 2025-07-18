@@ -64,6 +64,7 @@ public final class Pipeline {
         }
     }
 
+    @discardableResult
     public func run(_ runner: PipelineRunner) async throws -> PipelineCompletionState {
         try await runner.run(context)
     }

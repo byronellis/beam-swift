@@ -73,7 +73,7 @@ public struct PrismContainer {
         try await container.stop()
     }
 
-    public func runner(loopback: Bool) throws -> PortableRunner {
+    public func runner() throws -> PortableRunner {
         guard let runnerPort = container.port(for: .runner) else {
             throw PrismError.noRunnerPort
         }

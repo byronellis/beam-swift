@@ -50,6 +50,7 @@ final class FileIOTests {
         }
     }
     
+    @Test
     func testGoogleStorageListFiles() async throws {
         try await PCollectionTest(PCollection<KV<String, String>>().listFiles(in: GoogleStorage.self)) { log, inputs, outputs in
             log.info("Sending value")
@@ -62,6 +63,7 @@ final class FileIOTests {
         }.run()
     }
 
+    @Test
     func testGoogleStorageReadFiles() async throws {
         try await PCollectionTest(PCollection<KV<String, String>>().readFiles(in: GoogleStorage.self)) { log, inputs, outputs in
             log.info("Sending value")
@@ -76,7 +78,7 @@ final class FileIOTests {
 
     @Test
     func testShakespeareWordcount() async throws {
-        try await Pipeline { pipeline in
+        let result = try await Pipeline { pipeline in
             let contents = pipeline
                 .create(["dataflow-samples/shakespeare"])
                 .map { value in
@@ -109,7 +111,8 @@ final class FileIOTests {
 
             normalizedCounts.log(prefix: "COUNT OUTPUT")
 
-        }.run(prism.runner(loopback: true))
-
+        }.run(prism.runner())
+        // This should complete successfully
+        #expect(result == .done)
     }
 }
