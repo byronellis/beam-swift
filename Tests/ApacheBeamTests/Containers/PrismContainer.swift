@@ -25,16 +25,26 @@ public enum PrismError: Error {
     case webNotAvailable
 }
 
-public struct PrismContainer {
+/// Encapsulates a container that runs the Prism Runner for use in integration testing.
+public struct PrismContainer : TestContainerProvider {
+    
+    
+    
+    
     private let log = Logging.Logger(label: "PrismContainer")
+    private let baseImage: String
+    
+    /// Initializes a new container using the specified container runtime. This has the side effect of creating a container in the runtime.
+    /// - Parameters:
+    ///   - runtime: A container runtime such as Podman, Docker or the Apple native container runtime
+    ///   - baseImage: A base image capable of compiling go.
+    public init(baseImage: String = "golang:latest") {
+        self.baseImage = baseImage
+    }
+            
+    public func makeContainer(runtime: any ApacheBeam.ContainerRuntimeProvider) async throws -> any ApacheBeam.ContainerProvider {
 
-    let container: any ContainerProvider
-
-    init(
-        runtime: any ContainerRuntimeProvider,
-        baseImage: String = "golang:latest"
-    ) async throws {
-        self.container = try await runtime.makeContainer(
+        try await runtime.makeContainer(
             configuration: ContainerConfiguration(
                 image: baseImage,
                 exposedPorts: [
@@ -49,31 +59,26 @@ public struct PrismContainer {
             )
         )
     }
-
-    public func start(
-        timeout: TimeInterval = 600,
-        interval: TimeInterval = 10
-    ) async throws {
-        try await container.start()
+    
+    
+    public func started(_ container: any ApacheBeam.ContainerProvider,timeout: TimeInterval) async throws -> Bool {
         let finishAt = Date.now.addingTimeInterval(timeout)
         while finishAt > Date.now {
             let logs = try await container.logs()
             for try await line in logs {
                 log.info("PRISM: \(line)")
-                if line.contains("http://localhost:8074") {
+                if line.contains("localhost:8073") {
                     log.info("Finished starting Prism container")
-                    return
+                    return true
                 }
             }
         }
         throw PrismError.webNotAvailable
     }
-
-    public func stop() async throws {
-        try await container.stop()
-    }
-
-    public func runner() throws -> PortableRunner {
+    
+    public func provide<K>(_ key: K.Type, from container: any ApacheBeam.ContainerProvider) async throws -> K? {
+        guard key is PortableRunner.Type else { return nil }
+        
         guard let runnerPort = container.port(for: .runner) else {
             throw PrismError.noRunnerPort
         }
@@ -83,6 +88,10 @@ public struct PrismContainer {
             controlEndpoint: ApiServiceDescriptor(host: "localhost", port: Int(runnerPort)),
             loggingEndpoint: ApiServiceDescriptor(host: "localhost", port: Int(runnerPort)),
             dataplaneEndpoint: ApiServiceDescriptor(host: "localhost", port: Int(runnerPort))
-        )
+        ) as? K
     }
+    
+
+    
+
 }

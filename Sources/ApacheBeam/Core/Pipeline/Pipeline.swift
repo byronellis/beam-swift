@@ -210,6 +210,7 @@ public final class Pipeline {
                                                 $0.urn = fn.urn
                                                 $0.payload = try fn.payload
                                             }
+                                            $0.requestsFinalization = true
                                         }.serializedData()
                                     }
                                     $0.environmentID = defaultEnvironment.name
@@ -293,6 +294,7 @@ public final class Pipeline {
                 }
                 proto.rootTransformIds = rootIds
             }
+
             return PipelineContext(pipeline, defaultEnvironment.name, collections, fns)
         }
     }

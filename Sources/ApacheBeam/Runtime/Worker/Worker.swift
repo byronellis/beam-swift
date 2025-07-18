@@ -130,7 +130,7 @@ actor Worker {
                         $0.processBundleSplit = .with { _ in }
                     })
                 case let .finalizeBundle(fbr):
-                    log.info("Finializing bundle \(fbr.instructionID)")
+                    log.info("Finalizing bundle \(fbr.instructionID)")
                     metrics.removeValue(forKey: fbr.instructionID)
                     responder.yield(.with {
                         $0.instructionID = fbr.instructionID

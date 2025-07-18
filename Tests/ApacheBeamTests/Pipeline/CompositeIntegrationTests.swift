@@ -17,7 +17,7 @@
  */
 
 import ApacheBeam
-import XCTest
+import Testing
 
 /// Simple composite. Interesting the type resolution in composites doesn't work as well as other things? Not sure why that is. Not a huge deal.
 public struct FixtureWordCount: PTransform {
@@ -69,13 +69,9 @@ public struct FixtureWordCount: PTransform {
 }
 
 /// Test cases for composite test
-final class CompositeIntegrationTests: XCTestCase {
-    override func setUpWithError() throws {}
-
-    override func tearDownWithError() throws {}
+struct CompositeIntegrationTests {
 
     func testCompositeWordCount() async throws {
-        throw XCTSkip()
         try await Pipeline {
             FixtureWordCount(fixtures: ["file1.txt", "file2.txt", "missing.txt"])
         }.run(PortableRunner(loopback: .localhost))

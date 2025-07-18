@@ -28,29 +28,14 @@ import Testing
 import Foundation
 
 final class FileIOTests {
-    
-    let prism: PrismContainer
+
+//    let containers: TestContainers
     
     init() async throws {
-        let podman = try PodmanContainerRuntime()
-        self.prism = try await PrismContainer(runtime: podman)
-        try await self.prism.start()
+//        containers = try await TestContainers(runtime: PodmanContainerRuntime(),PrismContainer())
     }
     
-    deinit {
-        let local = prism
-        Task.detached {
-            let logger = Logging.Logger(label:"FileIOTests")
-            logger.info("Shutting down Prism container")
-            do {
-                try await local.stop()
-            } catch {
-                logger.error("\(error)")
-            }
-        }
-    }
     
-    @Test
     func testGoogleStorageListFiles() async throws {
         try await PCollectionTest(PCollection<KV<String, String>>().listFiles(in: GoogleStorage.self)) { log, inputs, outputs in
             log.info("Sending value")
@@ -63,7 +48,6 @@ final class FileIOTests {
         }.run()
     }
 
-    @Test
     func testGoogleStorageReadFiles() async throws {
         try await PCollectionTest(PCollection<KV<String, String>>().readFiles(in: GoogleStorage.self)) { log, inputs, outputs in
             log.info("Sending value")
@@ -88,7 +72,7 @@ final class FileIOTests {
                 }
                 .listFiles(in: GoogleStorage.self)
                 .readFiles(in: GoogleStorage.self)
-
+            
             // Simple ParDo that takes advantage of enumerateLines. No name to test name generation of pardos
             let lines = contents.pstream { contents, lines in
                 for await (content, ts, w) in contents {
@@ -97,21 +81,21 @@ final class FileIOTests {
                     }
                 }
             }
-
+            
             // Our first group by operation
             let baseCount = lines
                 .flatMap { (line: String) in line.components(separatedBy: .whitespaces) }
                 .groupBy { ($0, 1) }
                 .sum()
-
+            
             let normalizedCounts = baseCount.groupBy {
                 ($0.key.lowercased().trimmingCharacters(in: .punctuationCharacters),
                  $0.value ?? 1)
             }.sum()
-
+            
             normalizedCounts.log(prefix: "COUNT OUTPUT")
-
-        }.run(prism.runner())
+        }.run(PortableRunner(loopback: .localhost))
+//        }.run(containers.find(PortableRunner.self)!)
         // This should complete successfully
         #expect(result == .done)
     }
