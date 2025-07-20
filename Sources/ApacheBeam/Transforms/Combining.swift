@@ -21,7 +21,7 @@ public extension PCollection {
     func reduce<Result: Codable, K, V>(name: String? = nil, _file: String = #fileID, _line: Int = #line,
                                        into: Result, _ accumulator: @Sendable @escaping (V, inout Result) -> Void) -> PCollection<KV<K, Result>> where Of == KV<K, V>
     {
-        pstream(name: name ?? "\(_file):\(_line)", into) { initialValue, input, output in
+        pstream(name: name ?? "\(_file):\(_line).reduce", into) { initialValue, input, output in
             for await (kv, ts, w) in input {
                 var result = initialValue
                 for v in kv.values {

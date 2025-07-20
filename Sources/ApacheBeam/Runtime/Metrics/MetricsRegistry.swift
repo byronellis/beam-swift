@@ -34,7 +34,7 @@ public actor MetricsRegistry {
             l["NAMESPACE"] = namespace
             
             if transform != "" {
-                l["TRANSFORM"] = transform
+                l["PTRANSFORM"] = transform
             }
             if pcollection != "" {
                 l["PCOLLECTION"] = pcollection

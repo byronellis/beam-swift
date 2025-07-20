@@ -170,6 +170,7 @@ struct BundleProcessor {
                     })
                 }));
             } catch {
+                log.error("Problem with bundle processing \(error)")
                 responder.yield(.with {
                     $0.instructionID = instruction
                     $0.error = "\(error)"

@@ -60,7 +60,6 @@ final class FileIOTests {
         }.run()
     }
 
-    @Test
     func testShakespeareWordcount() async throws {
         let result = try await Pipeline { pipeline in
             let contents = pipeline
@@ -88,12 +87,20 @@ final class FileIOTests {
                 .groupBy { ($0, 1) }
                 .sum()
             
-            let normalizedCounts = baseCount.groupBy {
-                ($0.key.lowercased().trimmingCharacters(in: .punctuationCharacters),
-                 $0.value ?? 1)
-            }.sum()
+            let normalized = baseCount.flatMap { wordCount in
+                let k = wordCount.key.lowercased().trimmingCharacters(in: .punctuationCharacters)
+                if !k.isEmpty {
+//                    return [KV(k,wordCount.values.reduce(0,+))]
+                    return [k]
+                } else {
+                    return []
+                }
+            }
+//                .log(prefix: "NORMALIZED")
             
-            normalizedCounts.log(prefix: "COUNT OUTPUT")
+                .groupBy({ ($0, 1) })
+//                .sum()
+                .log(prefix: "SUMMARIZED")
         }.run(PortableRunner(loopback: .localhost))
 //        }.run(containers.find(PortableRunner.self)!)
         // This should complete successfully

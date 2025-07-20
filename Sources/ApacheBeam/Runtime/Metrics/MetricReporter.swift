@@ -43,6 +43,10 @@ public struct MetricReporter {
     }
     
     public func counter(name: String, namespace: String = "", pcollection: String? = nil) async -> Counter {
+
+        guard pcollection != nil || !transform.isEmpty else {
+            fatalError("Counter metric must define either a pcollection or a ptransform label")
+        }
         let value:ReportableMetric = .counter(0)
         let metricId = await register(name,namespace: namespace,transform: transform, pcollection: pcollection ?? self.pcollection, initialValue: value)
         reporter.yield(.update(metricId, value))

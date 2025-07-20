@@ -210,7 +210,6 @@ public final class Pipeline {
                                                 $0.urn = fn.urn
                                                 $0.payload = try fn.payload
                                             }
-                                            $0.requestsFinalization = true
                                         }.serializedData()
                                     }
                                     $0.environmentID = defaultEnvironment.name
@@ -238,11 +237,11 @@ public final class Pipeline {
                             throw ApacheBeamError.runtimeError("flatten not implemented yet")
                         case .external:
                             throw ApacheBeamError.runtimeError("External Transforms not implemented yet")
-                        case let .groupByKey(_, o):
+                        case let .groupByKey(_,n, o):
                             let outputs = try [o].enumerated().map {
                                 try ("\($0)", collection(from: $1).name)
                             }.dict()
-                            let p = try transform { _, name in
+                            let p = try transform(name:n) { _, name in
                                 .with {
                                     $0.uniqueName = name
                                     $0.inputs = inputs
@@ -250,6 +249,7 @@ public final class Pipeline {
                                     $0.spec = .with {
                                         $0.urn = .transformUrn("group_by_key")
                                     }
+                                    $0.environmentID = ""
                                 }
                             }
                             rootIds.append(p.name)

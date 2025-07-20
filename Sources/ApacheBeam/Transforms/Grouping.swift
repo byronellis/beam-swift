@@ -21,6 +21,6 @@
 public extension PCollection {
     func groupBy<K, V>(name: String? = nil, _file: String = #fileID, _line: Int = #line, _ fn: @Sendable @escaping (Of) -> (K, V)) -> PCollection<KV<K, V>> {
         map(name: name, _file: _file, _line: _line, fn)
-            .groupByKey()
-    }
+            .groupByKey(name, _file: _file, _line: _line)
+    }    
 }

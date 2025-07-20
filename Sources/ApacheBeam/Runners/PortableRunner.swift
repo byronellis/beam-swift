@@ -97,6 +97,9 @@ public struct PortableRunner: PipelineRunner {
             })
             log.info("Job \(job.jobID) status: \(status.state)")
             switch status.state {
+            case .done:
+                state = .done
+                done = true
             case .stopped:
                 state = .stopped
                 done = true

@@ -24,7 +24,7 @@ public enum PipelineTransform {
     case pardo(AnyPCollection, String, SerializableFn, [AnyPCollection])
     case impulse(AnyPCollection, AnyPCollection)
     case flatten([AnyPCollection], AnyPCollection)
-    case groupByKey(AnyPCollection, AnyPCollection)
+    case groupByKey(AnyPCollection, String, AnyPCollection)
     case custom(AnyPCollection, String, Data, Environment?, [AnyPCollection])
     case composite(AnyPCollection, AnyPTransform)
     case external(AnyPCollection, String, FieldValue, [AnyPCollection])
@@ -39,7 +39,7 @@ extension PipelineTransform: PipelineMember {
             p.roots
         case let .flatten(p, _):
             p.flatMap(\.roots)
-        case let .groupByKey(p, _):
+        case let .groupByKey(p, _, _):
             p.roots
         case let .custom(p, _, _, _, _):
             p.roots

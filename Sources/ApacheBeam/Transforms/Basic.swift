@@ -51,7 +51,7 @@ public extension PCollection {
     func log(prefix: String, _ name: String? = nil, _file: String = #fileID, _line: Int = #line) -> PCollection<Of> where Of == String {
         pstream(name: name ?? "\(_file):\(_line)", prefix) { prefix, input, output in
             for await element in input {
-                print("\(prefix): \(element)")
+                print("[\(prefix)] \(element)")
                 output.emit(element)
             }
         }
@@ -62,9 +62,8 @@ public extension PCollection {
         pstream(name: name ?? "\(_file):\(_line)", prefix) { prefix, input, output in
             for await element in input {
                 let kv = element.0
-                for v in kv.values {
-                    print("\(prefix): \(kv.key),\(v)")
-                }
+                let values = kv.values.map({ "\($0)" }).joined(separator: ",")
+                print("[\(prefix)] \(kv.key):(\(kv.values.count))[\(values)]")
                 output.emit(element)
             }
         }
