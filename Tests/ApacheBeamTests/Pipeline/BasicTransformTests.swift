@@ -29,32 +29,23 @@ public struct BasicTransformTests {
             "h": 1,"i": 1,"j": 1,"k": 1,"l": 1,"m": 2,"n": 2,
             "o": 2,"p": 2,"q": 2,"r": 2,"s": 2
         ]
-        
-        var output: [String:[Int]] = [:]
-        let (s,c) = AsyncStream.makeStream(of:(String,[Int]).self)
-        Task {
-            for await (k,v) in s {
-                output.merge([k:v], uniquingKeysWith: {a,b in a+b })
-            }
-        }
-
         let result = try await Pipeline { pipeline in
-
             pipeline.create([
                 "A a B b C c D d E e",
-                "A f G h I j K l M m",
-                "N n O o P p Q q R r S s",
+                 "A f G h I j K l M m",
+                 "N n O o P p Q q R r S s",
             ]).flatMap({ $0.components(separatedBy: .whitespaces) })
                 .groupBy({ ($0, 1) })
                 .sum()
                 .map({ ($0.key.lowercased(), $0.values.reduce(0, +)) })
-                .capture(captured: c)
                 .groupByKey()
                 .sum()
-                .log(prefix: "RESULT")
+                .pstream { input in
+                    for try await (kv,_,_) in input {
+                        #expect(expectedResult[kv.key] == kv.value)
+                    }
+                }
         }.run(PortableRunner(loopback: .localhost))
-        
-        print("\(output)")
         
         #expect(result == .done)
     }
