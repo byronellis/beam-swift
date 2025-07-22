@@ -53,8 +53,8 @@ public struct ContainerPort {
         public let port: UInt16
     }
 
-    let identifier: Identifier
-    let port: UInt16
+    public let identifier: Identifier
+    public let port: UInt16
 
     public static func fixedPort(for port: Identifier, at exposedPort: UInt16)
         throws -> ContainerPort
@@ -63,6 +63,18 @@ public struct ContainerPort {
             throw ContainerPortError.unableToBindPort(port, exposedPort)
         }
         return .init(identifier: port, port: exposedPort)
+    }
+    
+    public static func namedPort(_ name: String, inRange: ClosedRange<UInt16> = 16384...65535,maxAttempts: Int = 100) throws -> ContainerPort {
+        var attempt = 0
+        while(attempt < maxAttempts) {
+            let proposedPort = inRange.randomElement()!
+            if checkOpenPort(proposedPort) {
+                return .init(identifier: .init(name: name, port: proposedPort), port: proposedPort)
+            }
+            attempt += 1
+        }
+        throw ContainerPortError.unableFindOpenPort(.init(name: name, port: 0), inRange)
     }
 
     public static func dynamicPort(

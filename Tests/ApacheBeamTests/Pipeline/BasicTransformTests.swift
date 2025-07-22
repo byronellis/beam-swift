@@ -21,6 +21,12 @@ import Foundation
 import Testing
 
 public struct BasicTransformTests {
+    
+    let containers: TestContainers
+        
+    init() async throws {
+        containers = try await TestContainers(runtime: PodmanContainerRuntime(),PrismContainer())
+    }
 
     @Test("Multiple GroupByKey")
     func testMultipleGroupByKey() async throws {
@@ -32,20 +38,19 @@ public struct BasicTransformTests {
         let result = try await Pipeline { pipeline in
             pipeline.create([
                 "A a B b C c D d E e",
-                 "A f G h I j K l M m",
-                 "N n O o P p Q q R r S s",
+                "A f G h I j K l M m",
+                "N n O o P p Q q R r S s",
             ]).flatMap({ $0.components(separatedBy: .whitespaces) })
                 .groupBy({ ($0, 1) })
                 .sum()
-                .map({ ($0.key.lowercased(), $0.values.reduce(0, +)) })
-                .groupByKey()
+                .groupBy({ ($0.key.lowercased(), $0.values.reduce(0,+))})
                 .sum()
                 .pstream { input in
                     for try await (kv,_,_) in input {
                         #expect(expectedResult[kv.key] == kv.value)
                     }
                 }
-        }.run(PortableRunner(loopback: .localhost))
+        }.run(containers.find(PortableRunner.self)!)
         
         #expect(result == .done)
     }

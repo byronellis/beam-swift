@@ -34,19 +34,13 @@ public struct PortableRunner: PipelineRunner {
     let log: Logging.Logger
     let host: String
     let port: Int
-    let controlEndpoint: ApiServiceDescriptor?
-    let loggingEndpoint: ApiServiceDescriptor?
-    let dataplaneEndpoint: ApiServiceDescriptor?
     
 
-    public init(host: String = "localhost", port: Int = 8073, loopback: Loopback = .none, controlEndpoint: ApiServiceDescriptor? = nil,loggingEndpoint: ApiServiceDescriptor? = nil,dataplaneEndpoint: ApiServiceDescriptor? = nil) {
+    public init(host: String = "localhost", port: Int = 8073, loopback: Loopback = .none) {
         self.loopback = loopback
         log = .init(label: "PortableRunner")
         self.host = host
         self.port = port
-        self.controlEndpoint = controlEndpoint
-        self.loggingEndpoint = loggingEndpoint
-        self.dataplaneEndpoint = dataplaneEndpoint
     }
 
     @discardableResult
@@ -54,7 +48,7 @@ public struct PortableRunner: PipelineRunner {
         var proto = context.proto
         
         func worker(host: String, port: Int) throws -> WorkerServer {
-            try WorkerServer(context.collections, context.pardoFns, host: host, port: port, controlEndpoint: controlEndpoint,loggingEndpoint: loggingEndpoint,dataplaneEndpoint: dataplaneEndpoint)
+            try WorkerServer(context.collections, context.pardoFns, host: host, port: port)
         }
         
         switch loopback {

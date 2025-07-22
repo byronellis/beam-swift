@@ -43,18 +43,19 @@ public struct PrismContainer : TestContainerProvider {
     }
             
     public func makeContainer(runtime: any ApacheBeam.ContainerRuntimeProvider) async throws -> any ApacheBeam.ContainerProvider {
-
-        try await runtime.makeContainer(
+        let runnerPort : ContainerPort = try .namedPort(ContainerPort.Identifier.runner.name)
+        return try await runtime.makeContainer(
             configuration: ContainerConfiguration(
                 image: baseImage,
                 exposedPorts: [
-                    try .dynamicPort(for: .runner),
+                    runnerPort,
                     try .dynamicPort(for: .http(8074)),  // Web UI
                 ],
                 args: [
                     "/usr/local/go/bin/go", "run",
                     "github.com/apache/beam/sdks/v2/go/cmd/prism@latest",
-                    "--log_level=debug"
+                    "--log_level=debug",
+                    "--job_port=\(runnerPort.port)"
                 ]
             )
         )
@@ -67,7 +68,7 @@ public struct PrismContainer : TestContainerProvider {
             let logs = try await container.logs()
             for try await line in logs {
                 log.info("PRISM: \(line)")
-                if line.contains("localhost:8073") {
+                if line.contains("Serving JobManagement") {
                     log.info("Finished starting Prism container")
                     return true
                 }
@@ -84,10 +85,7 @@ public struct PrismContainer : TestContainerProvider {
         }
         return PortableRunner(
             port: Int(runnerPort),
-            loopback: .at("0.0.0.0", "host.containers.internal", 0),
-            controlEndpoint: ApiServiceDescriptor(host: "localhost", port: Int(runnerPort)),
-            loggingEndpoint: ApiServiceDescriptor(host: "localhost", port: Int(runnerPort)),
-            dataplaneEndpoint: ApiServiceDescriptor(host: "localhost", port: Int(runnerPort))
+            loopback: .at("0.0.0.0", "host.containers.internal", 0)
         ) as? K
     }
     

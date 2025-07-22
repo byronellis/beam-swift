@@ -30,17 +30,15 @@ actor Worker {
     private let fns: [String: SerializableFn]
     private let control: ApiServiceDescriptor
     private let remoteLog: ApiServiceDescriptor
-    private let data: ApiServiceDescriptor?
 
     private let log: Logging.Logger
     private let registry: MetricsRegistry
 
-    public init(id: String, control: ApiServiceDescriptor, log: ApiServiceDescriptor, data: ApiServiceDescriptor? = nil, collections: [String: AnyPCollection], functions: [String: SerializableFn]) {
+    public init(id: String, control: ApiServiceDescriptor, log: ApiServiceDescriptor, collections: [String: AnyPCollection], functions: [String: SerializableFn]) {
         self.id = id
         self.collections = collections
         fns = functions
         self.control = control
-        self.data = data
         remoteLog = log
 
         self.log = Logging.Logger(label: "Worker(\(id))")
@@ -52,23 +50,7 @@ actor Worker {
         let client = try Org_Apache_Beam_Model_FnExecution_V1_BeamFnControlAsyncClient(channel: GRPCChannelPool.with(endpoint: control, eventLoopGroup: group),defaultCallOptions: CallOptions(customMetadata: ["worker_id": id]))
         let (responses, responder) = AsyncStream.makeStream(of: Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse.self)
         let control = client.makeControlCall()
-        
-        let dataInterceptor: (RemoteGrpcPort) -> RemoteGrpcPort
-        if let dataplane = data {
-            dataInterceptor = { original in
-                do {
-                    return try .with {
-                        $0.coderID = original.coderID
-                        try dataplane.populate(&$0.apiServiceDescriptor)
-                    }
-                } catch {
-                   return original
-                }
-            }
-        } else {
-            dataInterceptor = { $0 }
-        }
-        
+                
 
         // Start the response task. This will continue until a yield call is sent from responder
         Task {
@@ -89,7 +71,7 @@ actor Worker {
                     return processor
                 }
                 let descriptor = try await client.getProcessBundleDescriptor(.with { $0.processBundleDescriptorID = bundle })
-                let processor = try await BundleProcessor(id: id, descriptor: descriptor, collections: collections, fns: fns, registry: registry, dataplaneInterceptor: dataInterceptor)
+                let processor = try await BundleProcessor(id: id, descriptor: descriptor, collections: collections, fns: fns, registry: registry)
                 processors[bundle] = processor
                 return processor
             }
@@ -142,7 +124,7 @@ actor Worker {
                     for id in mimr.monitoringInfoID {
                         tmp[id] = await registry.monitoringInfo(id)
                     }
-                    log.info("\(tmp)")
+//                    log.info("\(tmp)")
                     responder.yield(.with {
                         $0.instructionID = instruction.instructionID
                         $0.monitoringInfos = .with {

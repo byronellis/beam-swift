@@ -19,7 +19,7 @@
 public extension PCollection {
     func window(_ newWindow: Window) -> PCollection<Of> {
         pstream { input,output in
-            for try await (value,timestamp,window) in input {
+            for try await (value,timestamp,_) in input {
                 output.emit(value, timestamp: timestamp, window: newWindow)
             }
         }

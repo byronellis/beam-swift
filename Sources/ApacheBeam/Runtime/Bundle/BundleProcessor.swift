@@ -41,8 +41,7 @@ struct BundleProcessor {
          descriptor: Org_Apache_Beam_Model_FnExecution_V1_ProcessBundleDescriptor,
          collections: [String: AnyPCollection],
          fns: [String: SerializableFn],
-         registry: MetricsRegistry,
-         dataplaneInterceptor: (RemoteGrpcPort) -> RemoteGrpcPort = { $0 }) async throws
+         registry: MetricsRegistry) async throws
     {
         log = Logging.Logger(label: "BundleProcessor(\(id) \(descriptor.id))")
 
@@ -80,7 +79,7 @@ struct BundleProcessor {
             let outputs = transform.outputs.sorted().map { streams[$0.1]! }
 
             if urn == "beam:runner:source:v1" {
-                let remotePort = dataplaneInterceptor(try RemoteGrpcPort(serializedBytes: transform.spec.payload))
+                let remotePort = try RemoteGrpcPort(serializedBytes: transform.spec.payload)
 
                 let coder = try Coder.of(name: remotePort.coderID, in: coders)
                 log.info("Source '\(transformId)','\(transform.uniqueName)' \(remotePort) \(coder)")
@@ -92,7 +91,7 @@ struct BundleProcessor {
                     payload: Data()
                 ))
             } else if urn == "beam:runner:sink:v1" {
-                let remotePort = dataplaneInterceptor(try RemoteGrpcPort(serializedBytes: transform.spec.payload))
+                let remotePort = try RemoteGrpcPort(serializedBytes: transform.spec.payload)
                 let coder = try Coder.of(name: remotePort.coderID, in: coders)
                 log.info("Sink '\(transformId)','\(transform.uniqueName)' \(remotePort) \(coder)")
                 try temp.append(Step(

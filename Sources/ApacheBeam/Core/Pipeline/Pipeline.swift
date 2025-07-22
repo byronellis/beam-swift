@@ -155,8 +155,8 @@ public final class Pipeline {
                         }
                         $0.accumulationMode = .discarding
                         $0.outputTime = .endOfWindow
-                        $0.closingBehavior = .emitIfNonempty
-                        $0.onTimeBehavior = .fireIfNonempty
+                        $0.closingBehavior = .emitAlways
+                        $0.onTimeBehavior = .fireAlways
                         $0.environmentID = defaultEnvironment.name
                     }
                 }

@@ -27,22 +27,13 @@ actor WorkerProvider:
 
     private let collections: [String: AnyPCollection]
     private let functions: [String: SerializableFn]
-    private let controlEndpoint: ApiServiceDescriptor?
-    private let loggingEndpoint: ApiServiceDescriptor?
-    private let dataplaneEndpoint: ApiServiceDescriptor?
 
     init(
         _ collections: [String: AnyPCollection],
         _ functions: [String: SerializableFn],
-        controlEndpoint: ApiServiceDescriptor? = nil,
-        loggingEndpoint: ApiServiceDescriptor? = nil,
-        dataplaneEndpoint: ApiServiceDescriptor? = nil
     ) throws {
         self.collections = collections
         self.functions = functions
-        self.controlEndpoint = controlEndpoint
-        self.loggingEndpoint = loggingEndpoint
-        self.dataplaneEndpoint = dataplaneEndpoint
     }
 
     func startWorker(
@@ -57,11 +48,8 @@ actor WorkerProvider:
             } else {
                 let worker = Worker(
                     id: request.workerID,
-                    control: controlEndpoint
-                        ?? ApiServiceDescriptor(proto: request.controlEndpoint),
-                    log: loggingEndpoint
-                        ?? ApiServiceDescriptor(proto: request.loggingEndpoint),
-                    data: dataplaneEndpoint,
+                    control: ApiServiceDescriptor(proto: request.controlEndpoint),
+                    log: ApiServiceDescriptor(proto: request.loggingEndpoint),
                     collections: collections,
                     functions: functions
                 )
@@ -96,22 +84,14 @@ public struct WorkerServer {
         _ collections: [String: AnyPCollection],
         _ fns: [String: SerializableFn],
         host: String = "localhost",
-        port: Int = 0,
-        controlEndpoint: ApiServiceDescriptor? = nil,
-        loggingEndpoint: ApiServiceDescriptor? = nil,
-        dataplaneEndpoint: ApiServiceDescriptor? = nil
-    ) throws {
+        port: Int = 0) throws {
         server = try .insecure(
             group: PlatformSupport.makeEventLoopGroup(loopCount: 1)
         )
         .withServiceProviders([
             WorkerProvider(
                 collections,
-                fns,
-                controlEndpoint: controlEndpoint,
-                loggingEndpoint: loggingEndpoint,
-                dataplaneEndpoint: dataplaneEndpoint
-            )
+                fns)
         ])
         .bind(host: host, port: port)
         .wait()

@@ -54,6 +54,7 @@ final class Source: SerializableFn {
                 var localCount = 0
                 while d.count > 0 {
                     let value = try coder.decode(&d)
+                    log.info("\(context.instruction)-\(context.transform) read \(String(describing: value))")
                     for output in outputs {
                         try output.emit(value: value)
                     }
