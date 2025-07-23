@@ -96,7 +96,7 @@ public struct PortableRunner: PipelineRunner {
                 done = true
             case .stopped:
                 state = .stopped
-                done = true
+                try await Task.sleep(for: .seconds(5))
             case .failed:
                 state = .failed
                 done = true

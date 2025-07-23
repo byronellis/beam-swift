@@ -21,7 +21,7 @@ import Foundation
 extension Date {
     /// Convenience property to extract Java-style milliseconds since the UNIX epoch
     var millisecondsSince1970: Int64 {
-        // Multiply doubles by 1000 here gives us the wrong rounging. Make sure
+        // Multiply doubles by 1000 here gives us the wrong rounding. Make sure
         // we always do the right thing.
         let (intPart,fracPart) = modf(timeIntervalSince1970)
         return Int64(intPart)*1000 + Int64((fracPart*1000.0).rounded(.towardZero))
