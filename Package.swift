@@ -48,7 +48,7 @@ let dependencies: [Package.Dependency] = [
     ),
 
     // Swift Macro Support
-    .package(url: "https://github.com/apple/swift-syntax.git", branch: "main"),
+    .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.0"),
 
     // Swift Package Manager Plugins
     .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
@@ -74,9 +74,17 @@ let package = Package(
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
+        .macro(
+            name: "ApacheBeamMacros",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+            ]
+        ),
         .target(
             name: "ApacheBeam",
             dependencies: [
+                "ApacheBeamMacros",
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "OAuth2", package: "google-auth-library-swift"),
@@ -97,6 +105,10 @@ let package = Package(
         .testTarget(
             name: "ApacheBeamTests",
             dependencies: ["ApacheBeam"]
+        ),
+        .testTarget(
+            name: "ApacheBeamMacroTests",
+            dependencies: ["ApacheBeamMacros"]
         ),
     ]
 )
