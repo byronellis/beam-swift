@@ -17,18 +17,21 @@
  */
 
 import Foundation
-
 @testable import ApacheBeam
-import XCTest
+import Testing
+import Logging
 
-final class CoderTests: XCTestCase {
+struct CoderTests {
+    
+    @Test
     func testSimpleScalarConversions() throws {
-        XCTAssertTrue(Coder.of(type: Data.self) == .bytes)
-        XCTAssertTrue(Coder.of(type: String.self) == .string)
-        XCTAssertTrue(Coder.of(type: Bool.self) == .boolean)
-        XCTAssertTrue(Coder.of(type: Int.self) == .varint)
+        #expect(Coder.of(type: Data.self) == .bytes)
+        #expect(Coder.of(type: String.self) == .string)
+        #expect(Coder.of(type: Bool.self) == .boolean)
+        #expect(Coder.of(type: Int.self) == .varint)
     }
 
+    @Test
     func testDefaultImpulseDecode() throws {
         var impulse = Data([0x7F, 0xDF, 0x3B, 0x64, 0x5A, 0x1C, 0xAC, 0x09, 0x00, 0x00, 0x00, 0x01, 0x0F, 0x00])
         let impulseCoder = Coder.windowedvalue(.bytes, .globalwindow)
@@ -37,7 +40,7 @@ final class CoderTests: XCTestCase {
         switch value {
         case let .windowed(value, _, _, window):
             let data = value.baseValue as! Data
-            XCTAssertTrue(data.count == 0)
+            #expect(data.count == 0)
 
             let w = window.baseValue as! Window
             switch w {
@@ -52,17 +55,52 @@ final class CoderTests: XCTestCase {
         }
     }
 
-    func testWindowedValue() throws {
+    @Test
+    func testWindowedValueMin() throws {
         let coder = Coder.windowedvalue(.bytes, .globalwindow)
-        let timestamp = Date.now
+        let timestamp = Date.min
         var data = try coder.encode((Data(), timestamp, Window.global))
-        XCTAssertEqual(data.count, 14)
+        #expect(data.count==14)
         let value = try coder.decode(&data)
         switch value {
         case let .windowed(_, ts, _, _):
-            XCTAssertTrue("\(timestamp)" == "\(ts)")
+            #expect(ts.millisecondsSince1970 == Int64(-9223372036854775))
         default:
             throw ApacheBeamError.runtimeError("Expected a windowed value, got \(value)")
         }
     }
+
+    @Test
+    func testWindowedValueMax() throws {
+        let coder = Coder.windowedvalue(.bytes, .globalwindow)
+        let timestamp = Date.max
+        var data = try coder.encode((Data(), timestamp, Window.global))
+        #expect(data.count==14)
+        let value = try coder.decode(&data)
+        switch value {
+        case let .windowed(_, ts, _, _):
+            #expect(ts.millisecondsSince1970 == Int64(9223372036854775))
+        default:
+            throw ApacheBeamError.runtimeError("Expected a windowed value, got \(value)")
+        }
+    }
+
+    @Test
+    func testWindowedValueEndOfGlobalWindow() throws {
+        let coder = Coder.windowedvalue(.bytes, .globalwindow)
+        let timestamp = Date.endOfGlobalWindow
+        var data = try coder.encode((Data(), timestamp, Window.global))
+        #expect(data.count==14)
+        let value = try coder.decode(&data)
+        switch value {
+        case let .windowed(_, ts, _, _):
+            #expect(ts.millisecondsSince1970 == Int64(9223371_950_454_775))
+        default:
+            throw ApacheBeamError.runtimeError("Expected a windowed value, got \(value)")
+        }
+    }
+
+
+    
+    
 }

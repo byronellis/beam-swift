@@ -38,6 +38,14 @@ extension StreamType {
     }
 }
 
+public enum JobCompletionState {
+    case stopped
+    case failed
+    case done
+    case cancelled
+}
+
+
 public final class Pipeline {
     let content: (inout PCollection<Never>) -> Void
     let log: Logging.Logger
@@ -56,7 +64,8 @@ public final class Pipeline {
         }
     }
 
-    public func run(_ runner: PipelineRunner) async throws {
+    @discardableResult
+    public func run(_ runner: PipelineRunner) async throws -> PipelineCompletionState {
         try await runner.run(context)
     }
 
@@ -146,8 +155,8 @@ public final class Pipeline {
                         }
                         $0.accumulationMode = .discarding
                         $0.outputTime = .endOfWindow
-                        $0.closingBehavior = .emitIfNonempty
-                        $0.onTimeBehavior = .fireIfNonempty
+                        $0.closingBehavior = .emitAlways
+                        $0.onTimeBehavior = .fireAlways
                         $0.environmentID = defaultEnvironment.name
                     }
                 }
@@ -228,11 +237,11 @@ public final class Pipeline {
                             throw ApacheBeamError.runtimeError("flatten not implemented yet")
                         case .external:
                             throw ApacheBeamError.runtimeError("External Transforms not implemented yet")
-                        case let .groupByKey(_, o):
+                        case let .groupByKey(_,n, o):
                             let outputs = try [o].enumerated().map {
                                 try ("\($0)", collection(from: $1).name)
                             }.dict()
-                            let p = try transform { _, name in
+                            let p = try transform(name:n) { _, name in
                                 .with {
                                     $0.uniqueName = name
                                     $0.inputs = inputs
@@ -240,6 +249,7 @@ public final class Pipeline {
                                     $0.spec = .with {
                                         $0.urn = .transformUrn("group_by_key")
                                     }
+                                    $0.environmentID = ""
                                 }
                             }
                             rootIds.append(p.name)
@@ -284,6 +294,7 @@ public final class Pipeline {
                 }
                 proto.rootTransformIds = rootIds
             }
+
             return PipelineContext(pipeline, defaultEnvironment.name, collections, fns)
         }
     }

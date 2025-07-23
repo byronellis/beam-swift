@@ -34,6 +34,15 @@ public struct ApiServiceDescriptor {
     public init(unixAddress: String) {
         url = "unix://\(unixAddress)"
     }
+    
+    public var port: Int? {
+        get {
+            guard !url.starts(with: "unix://") else {
+                return nil
+            }
+            return Int(url.split(separator: ":")[1])
+        }
+    }
 }
 
 extension ApiServiceDescriptor {

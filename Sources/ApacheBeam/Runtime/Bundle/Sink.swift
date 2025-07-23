@@ -17,14 +17,18 @@
  */
 
 import Foundation
+import Logging
 
 final class Sink: SerializableFn {
     let client: DataplaneClient
     let coder: Coder
     
+    let log: Logger
+
     public init(client: DataplaneClient, coder: Coder) {
         self.client = client
         self.coder = coder
+        log = Logger(label: "Sink")
     }
 
     func process(context: SerializableFnBundleContext,
@@ -36,8 +40,10 @@ final class Sink: SerializableFn {
         var bytes = 0
         var records = 0
         for try await element in inputs[0] {
+            log.info("\(context.instruction)-\(context.transform) write \(String(describing: element))")
             var output = Data()
             try coder.encode(element, data: &output)
+
             bytes += output.count
             records += 1
             emitter.yield(.data(output))

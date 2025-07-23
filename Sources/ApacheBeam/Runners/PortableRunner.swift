@@ -19,31 +19,57 @@
 import GRPC
 import Logging
 import NIOCore
+import Foundation
+
+public enum Loopback {
+    case none
+    case localhost
+    case at(String,String,Int)
+}
+
+
 
 public struct PortableRunner: PipelineRunner {
-    let loopback: Bool
+    let loopback: Loopback
     let log: Logging.Logger
     let host: String
     let port: Int
+    
 
-    public init(host: String = "localhost", port: Int = 8073, loopback: Bool = false) {
+    public init(host: String = "localhost", port: Int = 8073, loopback: Loopback = .none) {
         self.loopback = loopback
         log = .init(label: "PortableRunner")
         self.host = host
         self.port = port
     }
 
-    public func run(_ context: PipelineContext) async throws {
+    @discardableResult
+    public func run(_ context: PipelineContext) async throws -> PipelineCompletionState {
         var proto = context.proto
-        if loopback {
-            // If we are in loopback mode we want to replace the default environment
-            // with an external environment that points to our local worker server
-            let worker = try WorkerServer(context.collections, context.pardoFns)
+        
+        func worker(host: String, port: Int) throws -> WorkerServer {
+            try WorkerServer(context.collections, context.pardoFns, host: host, port: port)
+        }
+        
+        switch loopback {
+            case .none: break
+        case .localhost:
+            let worker = try worker(host: "localhost", port: 0)
             log.info("Running in LOOPBACK mode with a worker server at \(worker.endpoint).")
             proto.components.environments[context.defaultEnvironmentId] = try .with {
                 try Environment.external(worker.endpoint).populate(&$0)
             }
+
+        case .at(let host, let exposedHost, let port):
+            let worker = try worker(host: host,port: port)
+            let advertisedEndpoint = ApiServiceDescriptor(host: exposedHost, port: worker.endpoint.port!)
+            log.info("Running in LOOPBACK mode with a worker server at \(advertisedEndpoint)")
+            proto.components.environments[context.defaultEnvironmentId] = try .with {
+                try Environment.external(advertisedEndpoint).populate(&$0)
+            }
         }
+        
+        
         log.info("\(proto)")
         log.info("Connecting to Portable Runner at \(host):\(port).")
         let group = PlatformSupport.makeEventLoopGroup(loopCount: 1)
@@ -58,18 +84,30 @@ public struct PortableRunner: PipelineRunner {
         })
         log.info("Submitted job \(job.jobID)")
         var done = false
+        var state: PipelineCompletionState = .failed
         while !done {
             let status = try await client.getState(.with {
                 $0.jobID = job.jobID
             })
             log.info("Job \(job.jobID) status: \(status.state)")
             switch status.state {
-            case .stopped, .failed, .done, .cancelled:
+            case .done:
+                state = .done
+                done = true
+            case .stopped:
+                state = .stopped
+                try await Task.sleep(for: .seconds(5))
+            case .failed:
+                state = .failed
+                done = true
+            case .cancelled:
+                state = .cancelled
                 done = true
             default:
                 try await Task.sleep(for: .seconds(5))
             }
         }
         log.info("Job completed.")
+        return state
     }
 }

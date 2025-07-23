@@ -21,7 +21,10 @@ import Foundation
 extension Date {
     /// Convenience property to extract Java-style milliseconds since the UNIX epoch
     var millisecondsSince1970: Int64 {
-        Int64((timeIntervalSince1970 * 1000.0).rounded())
+        // Multiply doubles by 1000 here gives us the wrong rounding. Make sure
+        // we always do the right thing.
+        let (intPart,fracPart) = modf(timeIntervalSince1970)
+        return Int64(intPart)*1000 + Int64((fracPart*1000.0).rounded(.towardZero))
     }
     
     /// Create a ``Date`` from UNIX epoch milliseconds
@@ -29,4 +32,10 @@ extension Date {
     init(millisecondsSince1970: Int64) {
         self = Date(timeIntervalSince1970: Double(millisecondsSince1970) / 1000.0)
     }
+    
+    public static var min = Date(millisecondsSince1970: -9223372036854775)
+    public static var max = Date(millisecondsSince1970: 9223372036854775)
+    public static var endOfGlobalWindow = Date(millisecondsSince1970: 9223371950454775)
+    
+    
 }

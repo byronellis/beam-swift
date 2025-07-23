@@ -17,9 +17,11 @@
  */
 
 public extension PCollection {
-    func window(type: StreamType = .unspecified) -> PCollection<Of> {
-        let output = PCollection<Of>(coder: coder, type: _resolve(self, type))
-        // TODO: Implement windowing strategy changes
-        return output
+    func window(_ newWindow: Window) -> PCollection<Of> {
+        pstream { input,output in
+            for try await (value,timestamp,_) in input {
+                output.emit(value, timestamp: timestamp, window: newWindow)
+            }
+        }
     }
 }

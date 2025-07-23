@@ -50,11 +50,11 @@ actor Worker {
         let client = try Org_Apache_Beam_Model_FnExecution_V1_BeamFnControlAsyncClient(channel: GRPCChannelPool.with(endpoint: control, eventLoopGroup: group),defaultCallOptions: CallOptions(customMetadata: ["worker_id": id]))
         let (responses, responder) = AsyncStream.makeStream(of: Org_Apache_Beam_Model_FnExecution_V1_InstructionResponse.self)
         let control = client.makeControlCall()
+                
 
         // Start the response task. This will continue until a yield call is sent from responder
         Task {
             for await r in responses {
-//                log.info("Sending response \(r)")
                 try await control.requestStream.send(r)
             }
         }
@@ -62,6 +62,7 @@ actor Worker {
         // Start the actual work task
         Task {
             log.info("Waiting for control plane instructions.")
+            
             var processors: [String: BundleProcessor] = [:]
             var metrics: [String: MetricAccumulator] = [:]
 
@@ -111,7 +112,7 @@ actor Worker {
                         $0.processBundleSplit = .with { _ in }
                     })
                 case let .finalizeBundle(fbr):
-                    log.info("Finializing bundle \(fbr.instructionID)")
+                    log.info("Finalizing bundle \(fbr.instructionID)")
                     metrics.removeValue(forKey: fbr.instructionID)
                     responder.yield(.with {
                         $0.instructionID = fbr.instructionID
@@ -123,7 +124,7 @@ actor Worker {
                     for id in mimr.monitoringInfoID {
                         tmp[id] = await registry.monitoringInfo(id)
                     }
-                    log.info("\(tmp)")
+//                    log.info("\(tmp)")
                     responder.yield(.with {
                         $0.instructionID = instruction.instructionID
                         $0.monitoringInfos = .with {
@@ -142,4 +143,5 @@ actor Worker {
             log.info("Control plane connection has closed.")
         }
     }
+    
 }
