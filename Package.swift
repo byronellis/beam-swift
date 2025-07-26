@@ -46,6 +46,7 @@ let dependencies: [Package.Dependency] = [
         url: "https://github.com/googleapis/google-auth-library-swift",
         from: "0.0.0"
     ),
+    .package(url: "https://github.com/apache/arrow-swift", from: "21.0.0"),
 
     // Swift Macro Support
     .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.0"),
@@ -96,6 +97,7 @@ let package = Package(
                     name: "OpenAPIAsyncHTTPClient",
                     package: "swift-openapi-async-http-client"
                 ),
+                .product(name: "Arrow", package: "arrow-swift"),
                 .product(
                     name: "ArgumentParser",
                     package: "swift-argument-parser"

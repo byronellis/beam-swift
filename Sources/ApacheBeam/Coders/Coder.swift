@@ -17,6 +17,7 @@
  */
 
 import Foundation
+import Arrow
 
 public indirect enum Coder {
     /// Catch-all for coders we don't understand. Mostly used for error reporting
@@ -35,6 +36,7 @@ public indirect enum Coder {
 
     /// Schema-valued things
     case row(Schema)
+    case arrow(ArrowSchema)
 }
 
 public extension Coder {
@@ -70,11 +72,13 @@ public extension Coder {
             .coderUrn("windowed_value")
         case .row:
             .coderUrn("row")
+        case .arrow:
+            .coderUrn("arrow")
         }
     }
 
     /// Static list of coders for use in capabilities arrays in environments.
-    static let capabilities: [String] = ["byte", "bytes", "bool", "varint", "double", "integer", "string_utf8", "length_prefix", "kv", "iterable", "windowed_value", "global_window"]
+    static let capabilities: [String] = ["byte", "bytes", "bool", "varint", "double", "integer", "string_utf8", "length_prefix", "kv", "iterable", "windowed_value", "global_window","arrow"]
         .map { .coderUrn($0) }
 }
 
@@ -204,11 +208,11 @@ public extension Coder {
         .iterable(.of(type: Of.self)!)
     }
 
+    static func of<Of:Beamable>(type _: Of.Type) -> Coder? {
+        return Of.coder
+    }
+    
     static func of<Of>(type _: Of.Type) -> Coder? {
-        // Beamables provider their own default coder implementation
-        if let beamable = Of.self as? Beamable.Type {
-            return beamable.coder
-        }
-        return nil
+        nil
     }
 }

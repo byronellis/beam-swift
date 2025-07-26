@@ -45,23 +45,36 @@ public enum JobCompletionState {
     case cancelled
 }
 
+public protocol PipelineEnvironment {
+    associatedtype Environment
+    
+    func apply(root: inout PCollection<Never>, content: @escaping (inout Environment) -> Void) throws
+}
 
-public final class Pipeline {
-    let content: (inout PCollection<Never>) -> Void
-    let log: Logging.Logger
-
-    public init(log: Logging.Logger = .init(label: "Pipeline"), _ content: @escaping (inout PCollection<Never>) -> Void) {
-        self.log = log
-        self.content = content
+public struct EmptyPipelineEnvironment : PipelineEnvironment {
+    
+    public typealias Environment = PCollection<Never>
+    
+    public func apply(root: inout PCollection<Never>, content: @escaping (inout Environment) -> Void) throws {
+        _ = content(&root)
     }
 
-    public init(log: Logging.Logger = .init(label: "Pipeline"), @PTransformBuilder content: () -> some PTransform) {
-        self.log = log
+    
+}
 
-        let transform = content()
+public final class Pipeline {
+    let content: (inout PCollection<Never>) throws -> Void
+    let log: Logging.Logger
+
+    public init<E:PipelineEnvironment>(log: Logging.Logger = .init(label: "Pipeline"), with environment:E,_ content: @escaping (inout E.Environment) -> Void) {
+        self.log = log
         self.content = { root in
-            _ = root.apply(transform)
+            try environment.apply(root: &root, content: content)
         }
+    }
+    
+    convenience init(log: Logging.Logger = .init(label: "Pipeline"),_ content: @escaping (inout PCollection<Never>) -> Void) {
+        self.init(log:log, with:EmptyPipelineEnvironment(), content)
     }
 
     @discardableResult
@@ -79,7 +92,7 @@ public final class Pipeline {
         get throws {
             // Grab the pipeline content using an new root
             var root = PCollection<Never>(coder: .unknown(.coderUrn("never")), type: .bounded)
-            _ = content(&root)
+            _ = try content(&root)
 
             // These get passed to the pipeline context
             var collections: [String: AnyPCollection] = [:]
